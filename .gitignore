@@ -1,7 +1,17 @@
+data/
+
+# Ignore common data formats
+*.csv
+*.parquet
+*.xpt
+*.XPT
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
 *$py.class
+
+.venv/
+*.pyc
 
 # C extensions
 *.so
