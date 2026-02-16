@@ -1,4 +1,5 @@
 data/
+.DS_Store
 
 # Ignore common data formats
 *.csv
