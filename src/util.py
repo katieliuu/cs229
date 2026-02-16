@@ -1,5 +1,4 @@
 import csv
-
 import matplotlib.pyplot as plt
 import numpy as np
 import json
@@ -20,13 +19,14 @@ def add_intercept_fn(x):
 
     return new_x
 
-def load_csv(csv_path, label_col='y', add_intercept=False):
+def load_csv(csv_path, label_col=None, add_intercept=False):
     """Load dataset from a CSV file.
 
     Args:
          csv_path: Path to CSV file containing dataset.
          label_col: Name of column to use as labels (should be 'y' or 'l').
          add_intercept: Add an intercept entry to x-values.
+         header_included: headers of features we want to use for this 
 
     Returns:
         xs: Numpy array of x-values (inputs).
@@ -36,9 +36,8 @@ def load_csv(csv_path, label_col='y', add_intercept=False):
     # Load headers
     with open(csv_path, 'r', newline='') as csv_fh:
         headers = csv_fh.readline().strip().split(',')
-
     # Load features and labels
-    x_cols = [i for i in range(len(headers)) if headers[i].startswith('x')]
+    x_cols = [i for i in range(len(headers)) if headers[i] != label_col and headers[i] != 'SEQN']
     l_cols = [i for i in range(len(headers)) if headers[i] == label_col]
     inputs = np.loadtxt(csv_path, delimiter=',', skiprows=1, usecols=x_cols)
     labels = np.loadtxt(csv_path, delimiter=',', skiprows=1, usecols=l_cols)
