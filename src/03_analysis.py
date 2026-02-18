@@ -43,12 +43,13 @@ df["LBXGH"].isna().mean()
 df = df[df["LBXGH"].notna()].copy()
 # clinical diabetes threshold
 df["diabetes"] = (df["LBXGH"] >= 6.5).astype(int)
+df = df.drop(columns=["LBXGH"])
 
 # combine the multiple BP readings
 df["SBP_mean"] = df[["BPXSY1", "BPXSY2", "BPXSY3"]].mean(axis=1)
 df["DBP_mean"] = df[["BPXDI1", "BPXDI2", "BPXDI3"]].mean(axis=1)
 # only keep columns relevant to diabetes
-cols_for_analysis = ["RIAGENDR", "RIDAGEYR", "RIDRETH3", "DMDEDUC2", "LBXGH", "LBXTC", "LBDHDD", "LBXSTR", "LBXSCR", "LBXHSCRP", "LBXGLU", "DBP_mean", "SBP_mean", "BMXBMI", "BMXHIP", "SMQ020", "diabetes"]
+cols_for_analysis = ["RIAGENDR", "RIDAGEYR", "RIDRETH3", "DMDEDUC2", "LBXTC", "LBDHDD", "LBXSTR", "LBXSCR", "LBXHSCRP", "LBXGLU", "DBP_mean", "SBP_mean", "BMXBMI", "BMXHIP", "SMQ020", "diabetes"]
 df = df[cols_for_analysis]
 
 df.groupby("RIAGENDR")["diabetes"].agg(n="count", positives="sum", prevalence="mean")
