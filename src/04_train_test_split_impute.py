@@ -51,6 +51,13 @@ X_train_imp = attach_categoricals(X_train_num_imp, X_train)
 X_val_imp   = attach_categoricals(X_val_num_imp, X_val)
 X_test_imp  = attach_categoricals(X_test_num_imp, X_test)
 
+X_train_imp.index.name = "SEQN"
+y_train.index.name = "SEQN"
+X_val_imp.index.name = "SEQN"
+y_val.index.name = "SEQN"
+X_test_imp.index.name = "SEQN"
+y_test.index.name = "SEQN"
+
 X_train_imp.to_csv(OUT_DIR / "X_train_imputed.csv", index=True)
 y_train.to_csv(OUT_DIR / "y_train.csv", index=True)
 X_val_imp.to_csv(OUT_DIR / "X_val_imputed.csv", index=True)
