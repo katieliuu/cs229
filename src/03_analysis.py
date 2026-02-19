@@ -63,7 +63,7 @@ for col in cat_cols:
     df[col] = df[col].astype("category")
 
 # Save csv to disk
-OUT_DIR = Path("data/analysis_ready")
+OUT_DIR = Path("src/data/analysis_ready")
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 out_path = OUT_DIR / "nhanes_joined_2017_2018.csv"
 df.to_csv(out_path, index=False)
