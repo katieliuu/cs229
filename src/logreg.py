@@ -7,11 +7,11 @@ import argparse
 def parse_arguments():
     """ Args parser for methods and hyperparameters """
     parser = argparse.ArgumentParser(description='Logistic Regression')
-    parser.add_argument('lambda_reg', type=float, default=10)
+    parser.add_argument('--lambda_reg', type=float, default=10)
     return parser.parse_args()
 
 
-def calc_grad_and_loss(X, Y, theta, cost_sensitive=False, penalty_weight=10, minority_feature_index=None):
+def calc_grad_and_loss(X, Y, theta, cost_sensitive, penalty_weight, minority_feature_index):
     """Compute gradient (ascent) and loss for logistic regression."""
     args = parse_arguments()
     epsilon = 1e-15
@@ -49,7 +49,7 @@ def calc_grad_and_loss(X, Y, theta, cost_sensitive=False, penalty_weight=10, min
     return grad, loss
 
 
-def logistic_regression(X, Y, max_iter=100000):
+def logistic_regression(X, Y, max_iter=100000, cost_sensitive=False, penalty_weight=10, minority_feature_index=None):
     """Train a logistic regression model."""
     theta = np.zeros(X.shape[1])
     learning_rate = 0.01
@@ -58,7 +58,7 @@ def logistic_regression(X, Y, max_iter=100000):
     while True:
         i += 1
         prev_theta = theta
-        grad, loss = calc_grad_and_loss(X, Y, theta, lambda_reg=10)
+        grad, loss = calc_grad_and_loss(X, Y, theta, cost_sensitive=cost_sensitive, penalty_weight=penalty_weight, minority_feature_index=minority_feature_index)
         theta = theta + learning_rate * grad
         if i % 10000 == 0:
             print('Finished %d iterations' % i)
@@ -67,31 +67,37 @@ def logistic_regression(X, Y, max_iter=100000):
         if np.linalg.norm(prev_theta - theta) < 1e-15 or i > max_iter:
             print('Converged in %d iterations' % i)
             break
-    return
+    return loss
 
 
 def main():
     print('==== Training model on data set A ====')
-    X_original, Y_original = util.load_csv('src/data/model_ready/train_processed.csv', add_intercept=True)
+    X_original, Y_original = util.load_csv('src/data/model_ready/train_processed.csv', label_col='diabetes', add_intercept=True)
     print("Xa shape:", X_original.shape)
     print("Ya shape:", Y_original.shape)
-    print("Ya unique:", np.unique(Y_original)[:10])
     #baseline experiment
-    logistic_regression(X_original, Y_original, max_iter=500000)
-    
+    final_loss_baseline = logistic_regression(X_original, Y_original, max_iter=100000)
     #cost-sensitive experiment
     minority_feature_index = util.return_minority_feature_index('src/data/model_ready/train_processed.csv')
-    logistic_regression(X_original, Y_original, max_iter=500000, cost_sensitive=True, penalty_weight=10, minority_feature_index=minority_feature_index)
+    final_loss_cost_sensitive = logistic_regression(X_original, Y_original, max_iter=100000, cost_sensitive=True, penalty_weight=10, minority_feature_index=minority_feature_index)
     
+    '''
     #Upsampled dataset experiment
     #TODO: CHANGE PATH TO UPSAMPLED TRAIN DATASET
-    X_upsampled, Y_upsampled = util.load_csv('src/data/model_ready/train_processed.csv', add_intercept=True)
-    logistic_regression(X_upsampled, Y_upsampled, max_iter=500000)
+    X_upsampled, Y_upsampled = util.load_csv('src/data/model_ready/train_processed.csv', label_col='diabetes', add_intercept=True)
+    final_loss_upsampled = logistic_regression(X_upsampled, Y_upsampled, max_iter=500000)
+    print(f'Upsampled final loss: {final_loss}')
     
     #Cluster-Upsampled experiment
     #TODO: CHANGE PATH TO CLUSTER-UPSAMPLED TRAIN DATASET
-    X_cluster_upsampled, Y_cluster_upsampled = util.load_csv('src/data/model_ready/train_processed.csv', add_intercept=True)
-    logistic_regression(X_cluster_upsampled, Y_cluster_upsampled, max_iter=500000)
-
+    X_cluster_upsampled, Y_cluster_upsampled = util.load_csv('src/data/model_ready/train_processed.csv', label_col='diabetes', add_intercept=True)
+    final_loss_cluster_upsampled = logistic_regression(X_cluster_upsampled, Y_cluster_upsampled, max_iter=500000)
+    print(f'Cluster-Upsampled final loss: {final_loss}')
+    
+    '''
+    print(f'Baseline final loss: {final_loss_baseline}')
+    print(f'Cost-sensitive final loss: {final_loss_cost_sensitive}')
+    #print(f'Upsampled final loss: {final_loss_upsampled}')
+    #print(f'Cluster-Upsampled final loss: {final_loss_cluster_upsampled}')
 if __name__ == '__main__':
     main()
