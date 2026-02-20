@@ -1,3 +1,8 @@
+"""
+03_analysis loads the partially preprocessed csv and performs some
+data exploration, filtering and cleaning. It saves a new version of
+the preprocessed dataset as a csv.
+"""
 from pathlib import Path
 import numpy as np
 import pandas as pd
@@ -22,7 +27,7 @@ df = df.drop(columns=["LBXGH"])
 df["SBP_mean"] = df[["BPXSY1", "BPXSY2", "BPXSY3"]].mean(axis=1)
 df["DBP_mean"] = df[["BPXDI1", "BPXDI2", "BPXDI3"]].mean(axis=1)
 # only keep columns we deem relevant to diabetes
-cols_for_analysis = ["RIAGENDR", "RIDAGEYR", "RIDRETH3", "DMDEDUC2", "LBXTC", "LBDHDD", "LBXSTR", "LBXSCR", "LBXHSCRP", "LBXGLU", "DBP_mean", "SBP_mean", "BMXBMI", "BMXHIP", "SMQ020", "diabetes"]
+cols_for_analysis = ["SEQN", "RIAGENDR", "RIDAGEYR", "RIDRETH3", "DMDEDUC2", "LBXTC", "LBDHDD", "LBXSTR", "LBXSCR", "LBXHSCRP", "LBXGLU", "DBP_mean", "SBP_mean", "BMXBMI", "BMXHIP", "SMQ020", "diabetes"]
 df = df[cols_for_analysis]
 # clean smoking column
 df["SMQ020"].unique()
