@@ -3,6 +3,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 import json
 
+def return_minority_feature_index(csv_path):
+    with open(csv_path, 'r', newline='') as csv_fh:
+        headers = csv_fh.readline().strip().split(',')
+    minority_feature_index = [i for i in range(len(headers)) if headers[i] == "RIDRETH3_1.0" or headers[i] == "RIDRETH3_4.0" or headers[i] == "RIDRETH3_6.0"]
+    return minority_feature_index
 
 def add_intercept_fn(x):
     """Add intercept to matrix x.
@@ -18,6 +23,23 @@ def add_intercept_fn(x):
     new_x[:, 1:] = x
 
     return new_x
+
+
+def load_xy_csv(x_path, y_path, add_intercept=False):
+    with open(x_path, 'r', newline='') as csv_fh_x:
+        headers = csv_fh_x.readline().strip().split(',')
+    x_cols = [i for i in range(len(headers)) if headers[i] != "SEQN"]
+    inputs = np.loadtxt(x_path, delimiter=',', skiprows=1, usecols=x_cols)
+    
+    with open(y_path, 'r', newline='') as csv_fh_y:
+        headers = csv_fh_y.readline().strip().split(',')
+    y_cols = [i for i in range(len(headers)) if headers[i] != "SEQN"]
+    labels = np.loadtxt(y_path, delimiter=',', skiprows=1, usecols=y_cols)
+    
+    if add_intercept:
+        inputs = add_intercept_fn(inputs)
+    
+    return inputs, labels
 
 def load_csv(csv_path, label_col=None, add_intercept=False):
     """Load dataset from a CSV file.
