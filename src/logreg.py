@@ -65,7 +65,7 @@ def logistic_regression(X, Y, max_iter=100000, cost_sensitive=False, penalty_wei
             print(f'Loss: {loss}')
             print(f'Weights: {theta}')
         if np.linalg.norm(prev_theta - theta) < 1e-15 or i > max_iter:
-            print('Converged in %d iterations' % i)
+            print('Converged in %d iterations' % i-1)
             break
     return loss
 
