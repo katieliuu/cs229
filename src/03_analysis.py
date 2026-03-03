@@ -43,5 +43,5 @@ pct_missing = df.isna().mean()
 df = df.loc[:, pct_missing <= 0.40]
 df.isna().mean().sort_values(ascending=False)
 
-df.to_csv("src/data/analysis_ready/nhanes_joined_2017_2018.csv", index=False)
+df.to_csv("src/data/analysis_ready/nhanes_diabetes_base.csv", index=False)
 
