@@ -12,7 +12,7 @@ from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import IterativeImputer
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from logreg_src import *
-# get rid of this 'from logreg_cost_sensitive import logistic_regression as cost_logreg #set penalty_weight to non 0 for cost_sensitive (replace all alphas with penalty weight)
+# get rid of this 'from logreg_cost_sensitive import logistic_regression as cost_logreg #set penalty_weight to non 0 for cost_sensitive
 from upsample import upsample_minority_class
 from cluster import # fill later w any preprocessing/experiment specific functions
 from gmm import # fill later w any preprocessing/experiment specific functions
@@ -41,6 +41,32 @@ def preprocess_transform(X_val, mice, scaler, encoder):
 
     return pd.concat([X_scaled, X_cat], axis=1)
 
+def f1_from_probs(y_true, probs, threshold):
+    y_true = np.asarray(y_true)
+    preds = (probs >= threshold).astype(int)
+    tp = np.sum((preds == 1) & (y_true == 1))
+    fp = np.sum((preds == 1) & (y_true == 0))
+    fn = np.sum((preds == 0) & (y_true == 1))
+
+    # precision
+    if tp + fp == 0:
+        precision = 0.0
+    else:
+        precision = tp / (tp + fp)
+
+    # recall
+    if tp + fn == 0:
+        recall = 0.0
+    else:
+        recall = tp / (tp + fn)
+
+    # f1
+    if precision + recall == 0:
+        f1 = 0.0
+    else:
+        f1 = 2 * precision * recall / (precision + recall)
+    return f1
+
 def cv_tune_pipeline(experiment_type = "baseline", n_splits = 5, inner_splits = 3, random_state = 3):
 
     df = pd.read_csv("src/data/model_ready/train_raw.csv")
@@ -50,7 +76,7 @@ def cv_tune_pipeline(experiment_type = "baseline", n_splits = 5, inner_splits = 
     lambda_grid = [0.0, 1e-4, 1e-3, 1e-2]
     threshold_grid = [0.3, 0.4, 0.5]
     kappa_grid = [1, 2, 3]
-    alpha_grid = [0.5, 1.0, 2.0]
+    penalty_weight_grid = [0.5, 1.0, 2.0]
 
     # INSERT GMM AND CLUSTERING PARAM GRIDS
     if experiment_type == "baseline":
@@ -58,33 +84,7 @@ def cv_tune_pipeline(experiment_type = "baseline", n_splits = 5, inner_splits = 
     elif experiment_type == "upsample":
         param_grid = list(product(kappa_grid, lambda_grid, threshold_grid))
     elif experiment_type == "cost_sensitive":
-        param_grid = list(product(alpha_grid, lambda_grid, threshold_grid))
-    
-    def f1_from_probs(y_true, probs, threshold):
-        y_true = np.asarray(y_true)
-        preds = (probs >= threshold).astype(int)
-        tp = np.sum((preds == 1) & (y_true == 1))
-        fp = np.sum((preds == 1) & (y_true == 0))
-        fn = np.sum((preds == 0) & (y_true == 1))
-
-        # precision
-        if tp + fp == 0:
-            precision = 0.0
-        else:
-            precision = tp / (tp + fp)
-
-        # recall
-        if tp + fn == 0:
-            recall = 0.0
-        else:
-            recall = tp / (tp + fn)
-
-        # f1
-        if precision + recall == 0:
-            f1 = 0.0
-        else:
-            f1 = 2 * precision * recall / (precision + recall)
-        return f1
+        param_grid = list(product(penalty_weight_grid, lambda_grid, threshold_grid))
 
     # outer cv starts here: evaluation using tuned params
     # gives train/val indices to split data in a stratified way (preserves the percentage of samples for each of diabetes/no diabetes)
@@ -114,13 +114,13 @@ def cv_tune_pipeline(experiment_type = "baseline", n_splits = 5, inner_splits = 
                 # experiment-specific params: ADD GMM and CLUSTERING params
                 if experiment_type == "baseline":
                     lambda_reg, threshold = params
-                    alpha = None
+                    penalty_weight = None
                     kappa = None
                 elif experiment_type == "upsample":
                     kappa, lambda_reg, threshold = params
-                    alpha = None
+                    penalty_weight = None
                 elif experiment_type == "cost_sensitive":
-                    alpha, lambda_reg, threshold = params
+                    penalty_weight, lambda_reg, threshold = params
                     kappa = None
 
                 X_train_inner_preprocessed, mice, scaler, encoder = preprocess_fit_transform(X_train_f_inner)
@@ -140,7 +140,7 @@ def cv_tune_pipeline(experiment_type = "baseline", n_splits = 5, inner_splits = 
                                                 lambda_reg = lambda_reg)
                 elif experiment_type == "cost_sensitive":
                     theta = cost_logreg(X_train_inner_preprocessed.to_numpy(), y_train_f_inner.to_numpy(),
-                                        alpha = alpha, regularize = True, lambda_reg = lambda_reg)
+                                        penalty_weight = penalty_weight, regularize = True, lambda_reg = lambda_reg)
                     
                 # prediction and score for inner loop
                 probs = 1 / (1 + np.exp(-(X_val_inner_preprocessed.to_numpy() @ theta)))
@@ -156,13 +156,13 @@ def cv_tune_pipeline(experiment_type = "baseline", n_splits = 5, inner_splits = 
         # experiment-specific params: ADD GMM and CLUSTERING params
         if experiment_type == "baseline":
             lambda_reg, threshold = params_star
-            alpha = None
+            penalty_weight = None
             kappa = None
         elif experiment_type == "upsample":
             kappa, lambda_reg, threshold = params_star
-            alpha = None
+            penalty_weight = None
         elif experiment_type == "cost_sensitive":
-            alpha, lambda_reg, threshold = params_star
+            penalty_weight, lambda_reg, threshold = params_star
             kappa = None
 
         # fit imputer, scaler, encoder to train folds
@@ -182,7 +182,7 @@ def cv_tune_pipeline(experiment_type = "baseline", n_splits = 5, inner_splits = 
             theta = logistic_regression(X_train_preprocessed.to_numpy(), y_train_f.to_numpy(), regularize=True, lambda_reg=lambda_reg)
 
         elif experiment_type == "cost_sensitive":
-            theta = cost_logreg(X_train_preprocessed.to_numpy(), y_train_f.to_numpy(), alpha=alpha, regularize=True, lambda_reg=lambda_reg)
+            theta = cost_logreg(X_train_preprocessed.to_numpy(), y_train_f.to_numpy(), penalty_weight=penalty_weight, regularize=True, lambda_reg=lambda_reg)
 
         # outer fold evaluation
         probs = 1 / (1 + np.exp(-(X_val_preprocessed.to_numpy() @ theta)))
@@ -193,7 +193,7 @@ def cv_tune_pipeline(experiment_type = "baseline", n_splits = 5, inner_splits = 
                         "inner_f1_star": score_star,
                         "lambda_reg": lambda_reg,
                         "threshold": threshold, "kappa": kappa,
-                        "alpha": alpha})
+                        "penalty_weight": penalty_weight})
         
     fold_metrics = pd.DataFrame(metrics)
 
@@ -202,3 +202,5 @@ def cv_tune_pipeline(experiment_type = "baseline", n_splits = 5, inner_splits = 
         "fold_metrics": fold_metrics,
         "summary" : {"f1_mean": fold_metrics["f1"].mean(),
                      "f1_std": fold_metrics["f1"].std()}}
+
+# i think the indiv experiment scripts should call cv_tune_pipeline in main(). so they should import * from 05_transform_and_cv.py
