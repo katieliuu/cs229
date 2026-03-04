@@ -11,7 +11,7 @@ from sklearn.model_selection import StratifiedKFold
 from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import IterativeImputer
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
-from logreg_src import *
+from logreg.logreg_src import *
 # get rid of this 'from logreg_cost_sensitive import logistic_regression as cost_logreg #set penalty_weight to non 0 for cost_sensitive
 from upsample import upsample_minority_class
 from cluster import # fill later w any preprocessing/experiment specific functions
