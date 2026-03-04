@@ -11,11 +11,11 @@ from sklearn.model_selection import StratifiedKFold
 from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import IterativeImputer
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
-from baseline import logistic_regression
-from cost_sensitive import logistic_regression as cost_logreg
+from logreg_src import *
+# get rid of this 'from logreg_cost_sensitive import logistic_regression as cost_logreg #set penalty_weight to non 0 for cost_sensitive (replace all alphas with penalty weight)
 from upsample import upsample_minority_class
-from cluster import # fill later
-from gmm import # fill later
+from cluster import # fill later w any preprocessing/experiment specific functions
+from gmm import # fill later w any preprocessing/experiment specific functions
 from itertools import product
 
 # identify numeric vs. cat cols
