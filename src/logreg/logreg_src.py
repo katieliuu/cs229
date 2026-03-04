@@ -17,7 +17,7 @@ def parse_arguments():
     return parser.parse_args()
 '''
 
-def calc_grad_and_loss(X, Y, theta, lambda_reg=0, penalty_weight=10, minority_feature_index=None):
+def calc_grad_and_loss(X, Y, theta, lambda_reg=0, penalty_weight=1, minority_feature_index=None):
     """Compute gradient (ascent) and loss for logistic regression."""
     #args = parse_arguments()
     epsilon = 1e-15
@@ -32,14 +32,14 @@ def calc_grad_and_loss(X, Y, theta, lambda_reg=0, penalty_weight=10, minority_fe
 
     
     # upweight only minority points
-    alpha = penalty_weight 
+    penalty_weight = penalty_weight 
     w = np.ones_like(Y, dtype=float)
-    # if only penalize minority class misclassification, w will be 'alpha' if any of the minority feature columns have 1
-    # if penalize all classes misclassification, w will bea vector of 'alpha' 
+    # if only penalize minority class misclassification, w will be 'penalty_weight' if any of the minority feature columns have 1
+    # if penalize all classes misclassification, w will bea vector of 'penalty_weight' 
     if (penalty_weight != 1 and minority_feature_index == None):
-        w[:] = alpha
+        w[:] = penalty_weight
     elif (penalty_weight == 1 and minority_feature_index != None):
-        w[(X[:, minority_feature_index] == 1).any(axis=1)] = alpha
+        w[(X[:, minority_feature_index] == 1).any(axis=1)] = penalty_weight
     else:
         w[:] = 1
     # weighted gradient ascent: X^T (w ⊙ (Y - p))
@@ -47,14 +47,14 @@ def calc_grad_and_loss(X, Y, theta, lambda_reg=0, penalty_weight=10, minority_fe
     grad = (weighted_err.dot(X) - 2 * lambda_reg * theta) / count 
     grad[0] = weighted_err.dot(X[:, 0]) / count  # don't regularize bias
     # (optional but usually correct) weighted loss:
-    # normalize by sum of weights so scale is comparable across alpha
+    # normalize by sum of weights so scale is comparable across penalty_weight
     loss_terms = -(Y * np.log(probs + epsilon) + (1 - Y) * np.log(1 - probs + epsilon))
     loss = np.sum(w * loss_terms) / np.sum(w)
 
     return grad, loss
 
 
-def logistic_regression(X, Y, max_iter=100000, lambda_reg=10, penalty_weight=10, minority_feature_index=None):
+def logistic_regression(X, Y, max_iter=100000, lambda_reg=0, penalty_weight=1, minority_feature_index=None):
     """Train a logistic regression model."""
     theta = np.zeros(X.shape[1])
     learning_rate = 0.01
