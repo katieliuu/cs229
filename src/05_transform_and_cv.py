@@ -137,7 +137,7 @@ def cv_tune_pipeline(experiment_type = "baseline", n_splits = 5, inner_splits = 
                 if experiment_type in ["baseline", "upsample"]:
                     theta = logistic_regression(X_train_inner_preprocessed.to_numpy(), y_train_f_inner.to_numpy(),
                                                 regularize = True,
-                                                lambda_reg = lambda_reg, penalty_weight=0)
+                                                lambda_reg = lambda_reg)
                 elif experiment_type == "cost_sensitive":
                     theta = logistic_regression(X_train_inner_preprocessed.to_numpy(), y_train_f_inner.to_numpy(),
                                         penalty_weight = penalty_weight, regularize = True, lambda_reg = lambda_reg)
@@ -179,7 +179,7 @@ def cv_tune_pipeline(experiment_type = "baseline", n_splits = 5, inner_splits = 
 
         # INSERT UPSAMPLING LOGIC FOR GMM AND CLUSTERING
         if experiment_type in ["baseline", "upsample", "clustering", "gmm"]:
-            theta = logistic_regression(X_train_preprocessed.to_numpy(), y_train_f.to_numpy(), regularize=True, lambda_reg=lambda_reg, penalty_weight=0)
+            theta = logistic_regression(X_train_preprocessed.to_numpy(), y_train_f.to_numpy(), regularize=True, lambda_reg=lambda_reg)
 
         elif experiment_type == "cost_sensitive":
             theta = logistic_regression(X_train_preprocessed.to_numpy(), y_train_f.to_numpy(), penalty_weight=penalty_weight, regularize=True, lambda_reg=lambda_reg)
