@@ -1,0 +1,49 @@
+{
+    "experiment_type": "upsample",
+    "fold_metrics": [
+        {
+            "fold": 0,
+            "f1": 0.7570789865871833,
+            "inner_f1_star": 0.7601571458976281,
+            "lambda_reg": 0.0,
+            "threshold": 0.4,
+            "penalty_weight": null
+        },
+        {
+            "fold": 1,
+            "f1": 0.7572383073496659,
+            "inner_f1_star": 0.7599635616156863,
+            "lambda_reg": 0.0,
+            "threshold": 0.4,
+            "penalty_weight": null
+        },
+        {
+            "fold": 2,
+            "f1": 0.7572519083969466,
+            "inner_f1_star": 0.7633633551488761,
+            "lambda_reg": 10.0,
+            "threshold": 0.4,
+            "penalty_weight": null
+        },
+        {
+            "fold": 3,
+            "f1": 0.7637161667885881,
+            "inner_f1_star": 0.7647498487015573,
+            "lambda_reg": 10.0,
+            "threshold": 0.4,
+            "penalty_weight": null
+        },
+        {
+            "fold": 4,
+            "f1": 0.768377253814147,
+            "inner_f1_star": 0.7564927099370609,
+            "lambda_reg": 0.0,
+            "threshold": 0.3,
+            "penalty_weight": null
+        }
+    ],
+    "summary": {
+        "f1_mean": 0.7607325245873062,
+        "f1_std": 0.0051238800928530386
+    }
+}
