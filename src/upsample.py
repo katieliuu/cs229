@@ -7,18 +7,15 @@ import pandas as pd
 import argparse
 import math
 
-# load pre-processed baseline training data
-train = pd.read_csv("src/data/model_ready/train_raw.csv")
-
 def naive_upsample(training_data):
     # find exact count of the majority class (NH White) in training set
-    target_count = train[train["RIDRETH3_3.0"] == 1].shape[0]
+    target_count = training_data[training_data["RIDRETH3_3.0"] == 1].shape[0]
 
     # isolate each class
-    majority_3 = train[train["RIDRETH3_3.0"] == 1]
-    minority_1 = train[train["RIDRETH3_1.0"] == 1]
-    minority_4 = train[train["RIDRETH3_4.0"] == 1]
-    minority_6 = train[train["RIDRETH3_6.0"] == 1]
+    majority_3 = training_data[training_data["RIDRETH3_3.0"] == 1]
+    minority_1 = training_data[training_data["RIDRETH3_1.0"] == 1]
+    minority_4 = training_data[training_data["RIDRETH3_4.0"] == 1]
+    minority_6 = training_data[training_data["RIDRETH3_6.0"] == 1]
 
     # calculate kappa (minority / majority) using ceiling division so we round up
     # kappa calculates how many whole times the minority class fits into the majority class
