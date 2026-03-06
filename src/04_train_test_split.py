@@ -3,6 +3,7 @@
 project, before any imputation/feature scaling/one-hot encoding.
 It rebalances the diabetes label per ethnicity, on the training set only.
 """
+from pathlib import Path
 import pandas as pd
 from sklearn.model_selection import train_test_split
 
@@ -44,6 +45,10 @@ train_balanced = pd.concat(ethnicities_balanced, ignore_index=True)
 # shuffle so that duplicates aren't grouped
 train_balanced = train_balanced.sample(frac=1.0, random_state=3).reset_index(drop=True)
 print(train_balanced.groupby("RIDRETH3")["diabetes"].agg(n="count", positives="sum", prevalence="mean")) # check diabetes prevalence per ethincity on balanced training set
+
+# create directory if it doesn't exist
+model_ready_dir = Path('src/data/model_ready')
+model_ready_dir.mkdir(parents=True, exist_ok=True)
 
 train_balanced_save = train_balanced.drop(columns=["SEQN"])
 test_save = test.drop(columns=["SEQN"])
