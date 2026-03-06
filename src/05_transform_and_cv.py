@@ -12,7 +12,7 @@ from sklearn.model_selection import StratifiedKFold
 from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import IterativeImputer
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
-from logreg.logreg_src import logistic_regression
+from LogReg.logreg_src import logistic_regression
 from upsample import naive_upsample
 #from cluster import # fill later w any preprocessing/experiment specific functions
 #from gmm import # fill later w any preprocessing/experiment specific functions
