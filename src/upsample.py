@@ -1,27 +1,33 @@
 """
 upsample.py reads the processed training set and upsamples the minority 
-racial classes to perfectly match the majority class (Non-Hispanic White). 
-It outputs a new csv file for the upsampled training set.
+racial classes based on specified kappa ratios. 
+It outputs a new dataframe for the upsampled training set.
 """
 import pandas as pd
 import argparse
 import math
 
-def naive_upsample(training_data):
-    # find exact count of the majority class (NH White) in training set
+def get_natural_kappas(training_data):
+    """
+    Helper function to calculate the natural minority/majority ratios in the dataset.
+    """
     target_count = training_data[training_data["RIDRETH3_3.0"] == 1].shape[0]
+    
+    kappa_1 = len(training_data[training_data["RIDRETH3_1.0"] == 1]) / target_count
+    kappa_4 = len(training_data[training_data["RIDRETH3_4.0"] == 1]) / target_count
+    kappa_6 = len(training_data[training_data["RIDRETH3_6.0"] == 1]) / target_count
+    
+    return kappa_1, kappa_4, kappa_6
 
+def naive_upsample(training_data, kappa_1, kappa_4, kappa_6):
+    """
+    Upsamples the minority classes based on the provided kappa values.
+    """
     # isolate each class
     majority_3 = training_data[training_data["RIDRETH3_3.0"] == 1]
     minority_1 = training_data[training_data["RIDRETH3_1.0"] == 1]
     minority_4 = training_data[training_data["RIDRETH3_4.0"] == 1]
     minority_6 = training_data[training_data["RIDRETH3_6.0"] == 1]
-
-    # calculate kappa (minority / majority) using ceiling division so we round up
-    # kappa calculates how many whole times the minority class fits into the majority class
-    kappa_1 = len(minority_1) / target_count
-    kappa_4 = len(minority_4) / target_count
-    kappa_6 = len(minority_6) / target_count
 
     # calculate repeat count (1 / kappa), rounded up
     repeat_1 = math.ceil(1 / kappa_1)
