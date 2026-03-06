@@ -7,31 +7,30 @@ Cost-sensitive learning is done by upweighting the minority class misclassificat
 
 import util
 import numpy as np
+import pandas as pd
 import argparse
 from logreg_src import *
 
 
 def main():
     
-    X_original, Y_original = util.load_csv('src/data/model_ready/train_processed.csv', label_col='diabetes', add_intercept=True)
+    X_original, Y_original = util.load_csv('src/data/model_ready/train_raw.csv', label_col='diabetes', add_intercept=True)
     print("X_original shape:", X_original.shape)
     print("Y_original shape:", Y_original.shape)
     minority_feature_index = util.return_minority_feature_index('src/data/model_ready/train_processed.csv')
     
     
     #Regularized without cost-sensitive learning
-    final_loss_w_reg_wo_cs, theta_w_reg_wo_cs = logistic_regression(X_original, Y_original, max_iter=100000, lambda_reg=10, penalty_weight=1)
+    train_loss_w_reg_wo_cs, theta_w_reg_wo_cs = logistic_regression(X_original, Y_original, max_iter=100000, lambda_reg=10, penalty_weight=1)
     
-    #Regularized with cost-sensitive learning only on minority class
-    final_loss_w_reg_w_cs, theta_w_reg_w_cs = logistic_regression(X_original, Y_original, max_iter=100000, lambda_reg=10, penalty_weight=10, minority_feature_index=minority_feature_index)
-    
-    #Regularized with cost-sensitive learning on all classes
-    final_loss_w_reg_w_cs_all, theta_w_reg_w_cs_all = logistic_regression(X_original, Y_original, max_iter=100000, lambda_reg=10, penalty_weight=10, minority_feature_index=None)
+    #Regularized with cost-sensitive learning
+    X_original_df = pd.read_csv('src/data/model_ready/train_raw.csv')
+    sample_weight = util.calculate_sample_weight(X_original_df)
+    train_loss_w_reg_w_cs, theta_w_reg_w_cs = logistic_regression(X_original, Y_original, max_iter=100000, lambda_reg=10, sample_weight=sample_weight) #TODO: add hyperparameter from Charlotte's CV results
     
     #Print final losses
-    print(f'Regularized without cost-sensitive learning final loss: {final_loss_w_reg_wo_cs}')
-    print(f'Regularized with cost-sensitive learning final loss: {final_loss_w_reg_w_cs}')
-    print(f'Regularized with cost-sensitive learning on all classes final loss: {final_loss_w_reg_w_cs_all}')
+    print(f'Regularized without cost-sensitive learning train loss: {train_loss_w_reg_wo_cs}')
+    print(f'Regularized with cost-sensitive learning train loss: {train_loss_w_reg_w_cs}')
     
     
 if __name__ == '__main__':

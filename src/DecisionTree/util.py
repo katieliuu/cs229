@@ -2,6 +2,37 @@ import csv
 import matplotlib.pyplot as plt
 import numpy as np
 import json
+import pandas as pd
+
+
+def calculate_sample_weight(dframe):
+    """Calculate sample weight for each class"""
+
+    # ethnicity column names
+    ethnicity_cols = [
+        "RIDRETH3_1.0",
+        "RIDRETH3_3.0",
+        "RIDRETH3_4.0",
+        "RIDRETH3_6.0"
+    ]
+
+    # total samples
+    N = len(dframe)
+
+    # number of ethnicity groups
+    K = len(ethnicity_cols)
+
+    # count samples in each ethnicity group
+    group_counts = dframe[ethnicity_cols].sum()
+
+    # compute weights using w_g = N / (K * n_g)
+    weights_map = {col: N / (K * group_counts[col]) for col in ethnicity_cols}
+
+    # assign weight to each patient
+    sample_weight = dframe[ethnicity_cols].dot(pd.Series(weights_map))
+    sample_weight = sample_weight.to_numpy()
+        
+    return sample_weight
 
 def return_minority_feature_index(csv_path):
     with open(csv_path, 'r', newline='') as csv_fh:

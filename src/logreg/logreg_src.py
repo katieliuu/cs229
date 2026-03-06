@@ -3,76 +3,71 @@ logistic_regression.py trains a logistic regression model on the dataset.
 The model functions will be imported and used in other scripts that experiment with different hyperparameters or methods.
 """
 
-import util
 import numpy as np
-import argparse
 
-'''
-def parse_arguments():
-    """ Args parser for methods and hyperparameters """
-    parser = argparse.ArgumentParser(description='Logistic Regression')
-    parser.add_argument('regularize', action='store_true')
-    parser.add_argument('cost_sensitive', action='store_true')
-    #parser.add_argument('--lambda_reg', type=float, default=10)
-    return parser.parse_args()
-'''
+def sigmoid(z):
+    z = np.clip(z, -500, 500)
+    return 1.0 / (1.0 + np.exp(-z))
 
-def calc_grad_and_loss(X, Y, theta, lambda_reg=0, penalty_weight=1, minority_feature_index=None):
-    """Compute gradient (ascent) and loss for logistic regression."""
-    #args = parse_arguments()
-    epsilon = 1e-15
+def calc_grad_and_loss(X, Y, theta, lambda_reg=0.0, sample_weight=None):
+    epsilon = 1e-6
     count, _ = X.shape
 
-    z = X.dot(theta)
-    z = np.clip(z, -500, 500)
-    probs = 1. / (1 + np.exp(-z))
+    z = X @ theta
+    probs = sigmoid(z)
+    err = Y - probs
 
-    # error term for log-likelihood gradient ascent
-    err = (Y - probs)
-
-    
-    # upweight only minority points
-    penalty_weight = penalty_weight 
-    w = np.ones_like(Y, dtype=float)
-    # if only penalize minority class misclassification, w will be 'penalty_weight' if any of the minority feature columns have 1
-    # if penalize all classes misclassification, w will bea vector of 'penalty_weight' 
-    if (penalty_weight != 1 and minority_feature_index == None):
-        w[:] = penalty_weight
-    elif (penalty_weight == 1 and minority_feature_index != None):
-        w[(X[:, minority_feature_index] == 1).any(axis=1)] = penalty_weight
+    if sample_weight is None:
+        w = np.ones(count, dtype=float)
     else:
-        w[:] = 1
-    # weighted gradient ascent: X^T (w ⊙ (Y - p))
+        w = np.asarray(sample_weight, dtype=float).reshape(-1)
+        assert len(w) == count, "Sample weight length must match number of samples"
+
+    weight_sum = np.sum(w)
     weighted_err = w * err
-    grad = (weighted_err.dot(X) - 2 * lambda_reg * theta) / count 
-    grad[0] = weighted_err.dot(X[:, 0]) / count  # don't regularize bias
-    # (optional but usually correct) weighted loss:
-    # normalize by sum of weights so scale is comparable across penalty_weight
+
+    # gradient ascent on weighted log-likelihood
+    grad = (X.T @ weighted_err) / weight_sum
+
+    # L2 regularization, excluding bias
+    grad[1:] -= 2 * lambda_reg * theta[1:]
+
+    # weighted cross-entropy loss
     loss_terms = -(Y * np.log(probs + epsilon) + (1 - Y) * np.log(1 - probs + epsilon))
-    loss = np.sum(w * loss_terms) / np.sum(w)
+    data_loss = np.sum(w * loss_terms) / weight_sum
 
-    return grad, loss
+    reg_loss = lambda_reg * np.sum(theta[1:] ** 2)
+    total_loss = data_loss + reg_loss
 
+    return grad, total_loss
 
-def logistic_regression(X, Y, max_iter=100000, lambda_reg=0, penalty_weight=1, minority_feature_index=None):
-    """Train a logistic regression model."""
-    theta = np.zeros(X.shape[1])
-    learning_rate = 0.01
+def logistic_regression(X_train, Y_train, max_iter=100000, lambda_reg=0.0,
+                        sample_weight=None, learning_rate=0.01):
+    theta = np.zeros(X_train.shape[1], dtype=float)
 
-    i = 0
-    while True:
-        i += 1
-        prev_theta = theta
-        grad, loss = calc_grad_and_loss(X, Y, theta, lambda_reg=lambda_reg, penalty_weight=penalty_weight, minority_feature_index=minority_feature_index)
+    for i in range(1, max_iter + 1):
+        prev_theta = theta.copy()
+
+        grad, loss = calc_grad_and_loss(
+            X_train,
+            Y_train,
+            theta,
+            lambda_reg=lambda_reg,
+            sample_weight=sample_weight
+        )
+
         theta = theta + learning_rate * grad
+
         if i % 10000 == 0:
-            print('Finished %d iterations' % i)
-            print(f'Loss: {loss}')
-            print(f'Weights: {theta}')
-        if np.linalg.norm(prev_theta - theta) < 1e-15 or i > max_iter:
-            print('Converged in %d iterations' % i-1)
+            print(f"Finished {i} iterations")
+            print(f"Loss: {loss}")
+            print(f"Weights: {theta}")
+
+        if np.linalg.norm(theta - prev_theta) < 1e-6:
+            print(f"Converged in {i} iterations")
             break
-    return loss
+
+    return theta, loss
 
 '''
 def main():
