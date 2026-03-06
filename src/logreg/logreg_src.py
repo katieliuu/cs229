@@ -20,7 +20,7 @@ def parse_arguments():
 def calc_grad_and_loss(X, Y, theta, lambda_reg=0, penalty_weight=1, minority_feature_index=None):
     """Compute gradient (ascent) and loss for logistic regression."""
     #args = parse_arguments()
-    epsilon = 1e-15
+    epsilon = 1e-6
     count, _ = X.shape
 
     z = X.dot(theta)
@@ -54,7 +54,7 @@ def calc_grad_and_loss(X, Y, theta, lambda_reg=0, penalty_weight=1, minority_fea
     return grad, loss
 
 
-def logistic_regression(X, Y, max_iter=100000, lambda_reg=0, penalty_weight=1, minority_feature_index=None):
+def logistic_regression(X, Y, max_iter=5000, lambda_reg=0, penalty_weight=1, minority_feature_index=None):
     """Train a logistic regression model."""
     theta = np.zeros(X.shape[1])
     learning_rate = 0.01
@@ -69,10 +69,10 @@ def logistic_regression(X, Y, max_iter=100000, lambda_reg=0, penalty_weight=1, m
             print('Finished %d iterations' % i)
             print(f'Loss: {loss}')
             print(f'Weights: {theta}')
-        if np.linalg.norm(prev_theta - theta) < 1e-15 or i > max_iter:
-            print('Converged in %d iterations' % i-1)
+        if np.linalg.norm(prev_theta - theta) < 1e-6 or i > max_iter:
+            print('Converged in %d iterations' % (i-1))
             break
-    return loss
+    return theta
 
 '''
 def main():
