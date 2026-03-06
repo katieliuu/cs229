@@ -37,8 +37,8 @@ for ethn in ethnicities:
     ethnicities_balanced.append(train_ethn_bal)
     # verify
     print("--- TOP OFF LABEL REBALANCING ---")
-    print(f"Diabetes: {train_upsampled['diabetes'].sum()}") # for that ethnicity print how many diabetes patients
-    print(f"Total:  {train_upsampled.shape[0]}") # for that ethnicity print total patients. should be the above x 2
+    print(f"Diabetes: {train_ethn_bal['diabetes'].sum()}") # for that ethnicity print how many diabetes patients
+    print(f"Total:  {train_ethn_bal.shape[0]}") # for that ethnicity print total patients. should be the above x 2
 
 train_balanced = pd.concat(ethnicities_balanced, ignore_index=True)
 # shuffle so that duplicates aren't grouped
