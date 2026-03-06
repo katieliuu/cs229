@@ -41,7 +41,7 @@ def calc_grad_and_loss(X, Y, theta, lambda_reg=0.0, sample_weight=None):
 
     return grad, total_loss
 
-def logistic_regression(X_train, Y_train, max_iter=100000, lambda_reg=0.0,
+def logistic_regression(X_train, Y_train, max_iter=5000, lambda_reg=0.0,
                         sample_weight=None, learning_rate=0.01):
     theta = np.zeros(X_train.shape[1], dtype=float)
 
