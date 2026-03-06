@@ -19,9 +19,14 @@ def naive_upsample(training_data):
 
     # calculate kappa (minority / majority) using ceiling division so we round up
     # kappa calculates how many whole times the minority class fits into the majority class
-    repeat_1 = math.ceil(target_count / len(minority_1))
-    repeat_4 = math.ceil(target_count / len(minority_4))
-    repeat_6 = math.ceil(target_count / len(minority_6))
+    kappa_1 = len(minority_1) / target_count
+    kappa_4 = len(minority_4) / target_count
+    kappa_6 = len(minority_6) / target_count
+
+    # calculate repeat count (1 / kappa), rounded up
+    repeat_1 = math.ceil(1 / kappa_1)
+    repeat_4 = math.ceil(1 / kappa_4)
+    repeat_6 = math.ceil(1 / kappa_6)
 
     # duplicates the dataset that many times (1 / kappa)
     minority_1_repeated = pd.concat([minority_1] * repeat_1, ignore_index=True)
