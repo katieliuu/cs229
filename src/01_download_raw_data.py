@@ -10,8 +10,9 @@ https://requests.readthedocs.io/en/latest/user/quickstart/.
 import requests
 from pathlib import Path
 
-# might have to do os makedir
+# create directory if it doesn't exist
 data_dir = Path('src/data/raw_xpt')
+data_dir.mkdir(parents=True, exist_ok=True)
 
 nhanes_urls = ["https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2017/DataFiles/DEMO_J.xpt",
 "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2017/DataFiles/BPX_J.xpt",

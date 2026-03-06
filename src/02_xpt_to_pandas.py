@@ -35,6 +35,10 @@ for d in datasets:
 print("Final rows:", joined.shape[0])
 joined["SEQN"].is_unique
 
+# create directory if it doesn't exist
+analysis_dir = Path('src/data/analysis_ready')
+analysis_dir.mkdir(parents=True, exist_ok=True)
+
 # again might have to do os makedir
 joined.to_csv("src/data/analysis_ready/nhanes_joined_2017_2018.csv", index=False)
 

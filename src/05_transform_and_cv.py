@@ -5,18 +5,19 @@ one-hot encoding on the categorical columns, and standardization onf the numeric
 Within both the inner and outer CV loop, both processing and evaluation are carried out. The cv_pipeline function
 takes in the experiment type as one of its arguments.
 """
+# remove penalty_weight from cost sensitive; need to add code that calcs weights for 
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import StratifiedKFold
 from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import IterativeImputer
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
-from logreg.logreg_src import *
-# get rid of this 'from logreg_cost_sensitive import logistic_regression as cost_logreg #set penalty_weight to non 0 for cost_sensitive
-from upsample import upsample_minority_class
-from cluster import # fill later w any preprocessing/experiment specific functions
-from gmm import # fill later w any preprocessing/experiment specific functions
+from logreg.logreg_src import logistic_regression
+from upsample import naive_upsample
+#from cluster import # fill later w any preprocessing/experiment specific functions
+#from gmm import # fill later w any preprocessing/experiment specific functions
 from itertools import product
+import json
 
 # identify numeric vs. cat cols
 numeric_cols = ["RIDAGEYR", "LBXTC", "LBDHDD", "LBXSTR", "LBXSCR", "LBXHSCRP", "DBP_mean", "SBP_mean", "BMXBMI", "BMXHIP", "SMQ020"]
@@ -71,18 +72,22 @@ def cv_tune_pipeline(experiment_type = "baseline", n_splits = 5, inner_splits = 
 
     df = pd.read_csv("src/data/model_ready/train_raw.csv")
     y = df["diabetes"].astype(int)
-    X = df.drop(columns=["diabetes", "SEQN"])
+    X = df.drop(columns=["diabetes"])
 
-    lambda_grid = [0.0, 1e-4, 1e-3, 1e-2]
+    lambda_grid = [0.0, 1e-4, 1e-3, 1e-2, 1e-1, 1, 10]
     threshold_grid = [0.3, 0.4, 0.5]
-    kappa_grid = [1, 2, 3]
-    penalty_weight_grid = [0.5, 1.0, 2.0]
+    # for upsampling: 3 diff kappas, obtained via separate function? Specify multiples of them
+    penalty_weight_grid = [0.5, 1.0, 2.0] # replace with function that computes the weights
+    gamma_grid = []
+    n_clusters_grid = []
 
     # INSERT GMM AND CLUSTERING PARAM GRIDS
     if experiment_type == "baseline":
         param_grid = list(product(lambda_grid, threshold_grid))
     elif experiment_type == "upsample":
-        param_grid = list(product(kappa_grid, lambda_grid, threshold_grid))
+        param_grid = list(product(lambda_grid, threshold_grid))
+    elif experiment_type == "cluster":
+        param_grid = list(product(gamma_grid, n_clusters_grid, lambda_grid, threshold_grid))
     elif experiment_type == "cost_sensitive":
         param_grid = list(product(penalty_weight_grid, lambda_grid, threshold_grid))
 
@@ -115,32 +120,42 @@ def cv_tune_pipeline(experiment_type = "baseline", n_splits = 5, inner_splits = 
                 if experiment_type == "baseline":
                     lambda_reg, threshold = params
                     penalty_weight = None
-                    kappa = None
+                    gamma = None
+                    n_clusters = None
                 elif experiment_type == "upsample":
-                    kappa, lambda_reg, threshold = params
+                    lambda_reg, threshold = params
+                    penalty_weight = None
+                    gamma = None
+                    n_clusters = None
+                elif experiment_type == "cluster":
+                    gamma, n_clusters, lambda_reg, threshold = params
                     penalty_weight = None
                 elif experiment_type == "cost_sensitive":
                     penalty_weight, lambda_reg, threshold = params
-                    kappa = None
+                    gamma = None
+                    n_clusters = None
 
                 X_train_inner_preprocessed, mice, scaler, encoder = preprocess_fit_transform(X_train_f_inner)
                 X_val_inner_preprocessed = preprocess_transform(X_val_f_inner, mice, scaler, encoder)
 
                 # manipulate fold for specific experiment
                 if experiment_type == "upsample":
-                    train_set_inner = pd.concat([X_train_inner_preprocessed, y_train_f_inner], axis=1)
-                    train_set_inner = upsample_minority_class(train_set_inner, kappa)
+                    train_set_inner = pd.concat([X_train_inner_preprocessed, y_train_f_inner.rename("diabetes")], axis=1)
+                    train_set_inner = naive_upsample(train_set_inner)
                     y_train_f_inner = train_set_inner["diabetes"]
                     X_train_inner_preprocessed = train_set_inner.drop(columns=["diabetes"])
+                
+                elif experiment_type == "cluster":
+                    # clustering code
 
-                # inner model fit ADD K MEANS AND GMM
-                if experiment_type in ["baseline", "upsample"]:
+                # inner model fit ADD GMM
+                if experiment_type in ["baseline", "upsample", "cluster"]:
                     theta = logistic_regression(X_train_inner_preprocessed.to_numpy(), y_train_f_inner.to_numpy(),
-                                                regularize = True,
                                                 lambda_reg = lambda_reg)
+                # change to account for penalty weight calculations
                 elif experiment_type == "cost_sensitive":
                     theta = logistic_regression(X_train_inner_preprocessed.to_numpy(), y_train_f_inner.to_numpy(),
-                                        penalty_weight = penalty_weight, regularize = True, lambda_reg = lambda_reg)
+                                        penalty_weight = penalty_weight, lambda_reg = lambda_reg)
                     
                 # prediction and score for inner loop
                 probs = 1 / (1 + np.exp(-(X_val_inner_preprocessed.to_numpy() @ theta)))
@@ -153,17 +168,24 @@ def cv_tune_pipeline(experiment_type = "baseline", n_splits = 5, inner_splits = 
                 params_star = params
 
         # now that we have the best parameters, refit the model on outer train fold with those params
-        # experiment-specific params: ADD GMM and CLUSTERING params
+        # experiment-specific params: ADD GMM params
         if experiment_type == "baseline":
             lambda_reg, threshold = params_star
             penalty_weight = None
-            kappa = None
+            gamma = None
+            n_clusters = None
         elif experiment_type == "upsample":
-            kappa, lambda_reg, threshold = params_star
+            lambda_reg, threshold = params_star
+            penalty_weight = None
+            gamma = None
+            n_clusters = None
+        elif experiment_type == "cluster":
+            gamma, n_clusters, lambda_reg, threshold = params
             penalty_weight = None
         elif experiment_type == "cost_sensitive":
             penalty_weight, lambda_reg, threshold = params_star
-            kappa = None
+            gamma = None
+            n_clusters = None
 
         # fit imputer, scaler, encoder to train folds
         X_train_preprocessed, mice, scaler, encoder = preprocess_fit_transform(X_train_f)
@@ -172,17 +194,20 @@ def cv_tune_pipeline(experiment_type = "baseline", n_splits = 5, inner_splits = 
 
         # experiment-specific logic
         if experiment_type == "upsample":
-            train_set = pd.concat([X_train_preprocessed, y_train_f], axis=1)
-            train_set = upsample_minority_class(train_set, kappa)
+            train_set = pd.concat([X_train_preprocessed, y_train_f.rename("diabetes")], axis=1)
+            train_set = naive_upsample(train_set)
             y_train_f = train_set["diabetes"]
             X_train_preprocessed = train_set.drop(columns=["diabetes"])
+        
+        elif experiment_type == "cluster":
+            # add clustering code
 
-        # INSERT UPSAMPLING LOGIC FOR GMM AND CLUSTERING
-        if experiment_type in ["baseline", "upsample", "clustering", "gmm"]:
-            theta = logistic_regression(X_train_preprocessed.to_numpy(), y_train_f.to_numpy(), regularize=True, lambda_reg=lambda_reg)
+        # INSERT UPSAMPLING LOGIC FOR GMM
+        if experiment_type in ["baseline", "upsample", "clustering"]:
+            theta = logistic_regression(X_train_preprocessed.to_numpy(), y_train_f.to_numpy(), lambda_reg=lambda_reg)
 
         elif experiment_type == "cost_sensitive":
-            theta = logistic_regression(X_train_preprocessed.to_numpy(), y_train_f.to_numpy(), penalty_weight=penalty_weight, regularize=True, lambda_reg=lambda_reg)
+            theta = logistic_regression(X_train_preprocessed.to_numpy(), y_train_f.to_numpy(), penalty_weight=penalty_weight, lambda_reg=lambda_reg)
 
         # outer fold evaluation
         probs = 1 / (1 + np.exp(-(X_val_preprocessed.to_numpy() @ theta)))
@@ -192,8 +217,10 @@ def cv_tune_pipeline(experiment_type = "baseline", n_splits = 5, inner_splits = 
         metrics.append({"fold": f, "f1": f1,
                         "inner_f1_star": score_star,
                         "lambda_reg": lambda_reg,
-                        "threshold": threshold, "kappa": kappa,
-                        "penalty_weight": penalty_weight})
+                        "threshold": threshold,
+                        "penalty_weight": penalty_weight,
+                        "gamma": gamma,
+                        "n_clusters": n_clusters})
         
     fold_metrics = pd.DataFrame(metrics)
 
@@ -203,4 +230,33 @@ def cv_tune_pipeline(experiment_type = "baseline", n_splits = 5, inner_splits = 
         "summary" : {"f1_mean": fold_metrics["f1"].mean(),
                      "f1_std": fold_metrics["f1"].std()}}
 
-# i think the indiv experiment scripts should call cv_tune_pipeline in main(). so they should import * from 05_transform_and_cv.py
+def main():
+    baseline_metrics_dict = cv_tune_pipeline()
+    baseline_metrics_dict["fold_metrics"] = baseline_metrics_dict["fold_metrics"].to_dict(orient="records")
+
+    baseline_save_path = 'src/metrics/baseline_log_reg_parameters.json'
+    with open(baseline_save_path, mode = 'w') as file:
+        json.dump(baseline_metrics_dict, file, indent = 4)
+
+    print(f"JSON file '{baseline_save_path}' created successfully")
+
+    upsample_metrics_dict = cv_tune_pipeline(experiment_type="upsample")
+    upsample_metrics_dict["fold_metrics"] = upsample_metrics_dict["fold_metrics"].to_dict(orient="records")
+
+    upsample_save_path = 'src/metrics/upsample_log_reg_parameters.json'
+    with open(upsample_save_path, mode = 'w') as file:
+        json.dump(upsample_metrics_dict, file, indent = 4)
+
+    print(f"JSON file '{upsample_save_path}' created successfully")
+
+    cluster_metrics_dict = cv_tune_pipeline(experiment_type="cluster")
+    cluster_metrics_dict["fold_metrics"] = cluster_metrics_dict["fold_metrics"].to_dict(orient="records")
+
+    cluster_save_path = 'src/metrics/cluster_log_reg_parameters.json'
+    with open(cluster_save_path, mode = 'w') as file:
+        json.dump(cluster_metrics_dict, file, indent = 4)
+
+    print(f"JSON file '{cluster_save_path}' created successfully")
+
+if __name__ == '__main__':
+    main()
