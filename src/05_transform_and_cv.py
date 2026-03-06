@@ -13,9 +13,9 @@ from sklearn.impute import IterativeImputer
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from logreg.logreg_src import *
 # get rid of this 'from logreg_cost_sensitive import logistic_regression as cost_logreg #set penalty_weight to non 0 for cost_sensitive
-from upsample import upsample_minority_class
-from cluster import # fill later w any preprocessing/experiment specific functions
-from gmm import # fill later w any preprocessing/experiment specific functions
+from upsample import naive_upsample
+#from cluster import # fill later w any preprocessing/experiment specific functions
+#from gmm import # fill later w any preprocessing/experiment specific functions
 from itertools import product
 
 # identify numeric vs. cat cols
@@ -71,7 +71,7 @@ def cv_tune_pipeline(experiment_type = "baseline", n_splits = 5, inner_splits = 
 
     df = pd.read_csv("src/data/model_ready/train_raw.csv")
     y = df["diabetes"].astype(int)
-    X = df.drop(columns=["diabetes", "SEQN"])
+    X = df.drop(columns=["diabetes"])
 
     lambda_grid = [0.0, 1e-4, 1e-3, 1e-2]
     threshold_grid = [0.3, 0.4, 0.5]
@@ -129,7 +129,7 @@ def cv_tune_pipeline(experiment_type = "baseline", n_splits = 5, inner_splits = 
                 # manipulate fold for specific experiment
                 if experiment_type == "upsample":
                     train_set_inner = pd.concat([X_train_inner_preprocessed, y_train_f_inner], axis=1)
-                    train_set_inner = upsample_minority_class(train_set_inner, kappa)
+                    train_set_inner = naive_upsample(train_set_inner, kappa)
                     y_train_f_inner = train_set_inner["diabetes"]
                     X_train_inner_preprocessed = train_set_inner.drop(columns=["diabetes"])
 
@@ -173,7 +173,7 @@ def cv_tune_pipeline(experiment_type = "baseline", n_splits = 5, inner_splits = 
         # experiment-specific logic
         if experiment_type == "upsample":
             train_set = pd.concat([X_train_preprocessed, y_train_f], axis=1)
-            train_set = upsample_minority_class(train_set, kappa)
+            train_set = naive_upsample(train_set, kappa)
             y_train_f = train_set["diabetes"]
             X_train_preprocessed = train_set.drop(columns=["diabetes"])
 
@@ -204,3 +204,10 @@ def cv_tune_pipeline(experiment_type = "baseline", n_splits = 5, inner_splits = 
                      "f1_std": fold_metrics["f1"].std()}}
 
 # i think the indiv experiment scripts should call cv_tune_pipeline in main(). so they should import * from 05_transform_and_cv.py
+
+def main():
+    metrics_dict = cv_tune_pipeline()
+    print(metrics_dict)
+
+if __name__ == '__main__':
+    main()
