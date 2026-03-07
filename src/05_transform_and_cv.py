@@ -146,7 +146,7 @@ def cv_tune_pipeline(experiment_type = "baseline", n_splits = 5, inner_splits = 
                     X_train_inner_preprocessed = train_set_inner.drop(columns=["diabetes"])
                 
                 elif experiment_type == "cluster":
-                    # clustering code
+                    # clustering code. do this before one hot encoding, after scaling/imputation?
 
                 # inner model fit ADD GMM
                 if experiment_type in ["baseline", "upsample", "cluster"]:
