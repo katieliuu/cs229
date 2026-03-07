@@ -15,7 +15,7 @@ def main():
     model, train_accuracy = decision_tree(X_original, Y_original) #TODO: add hyperparameter from Charlotte's CV results
     
     #baseline with regularization
-    model_w_reg, train_accuracy_w_reg = decision_tree(X_original, Y_original, max_depth=None, min_samples_split=2, min_samples_leaf=1) #TODO: add hyperparameter from Charlotte's CV results
+    model_w_reg, train_accuracy_w_reg = decision_tree(X_original, Y_original, max_depth=None, min_samples_split=2, min_samples_leaf=1, sample_weight=None) #TODO: add hyperparameter from Charlotte's CV results
     
     print(f'Baseline without regularization train accuracy: {train_accuracy}')
     print(f'Baseline with regularization train accuracy: {train_accuracy_w_reg}')

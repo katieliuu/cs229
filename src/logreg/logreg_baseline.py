@@ -16,10 +16,10 @@ def main():
     print("Y_original shape:", Y_original.shape)
     
     #Baseline without regularization
-    train_loss_wo_reg, theta_wo_reg = logistic_regression(X_original, Y_original, max_iter=100000, lambda_reg=0)
+    train_loss_wo_reg, theta_wo_reg = logistic_regression(X_original, Y_original, max_iter=5000, lambda_reg=0)
     
     #Baseline with regularization
-    train_loss_w_reg, theta_w_reg = logistic_regression(X_original, Y_original, max_iter=100000, lambda_reg=10) #TODO: add hyperparameter from Charlotte's CV results
+    train_loss_w_reg, theta_w_reg = logistic_regression(X_original, Y_original, max_iter=5000, lambda_reg=10) #TODO: add hyperparameter from Charlotte's CV results
     
     print(f'Baseline without regularization train loss: {train_loss_wo_reg}')
     print(f'Baseline with regularization train loss: {train_loss_w_reg}')
