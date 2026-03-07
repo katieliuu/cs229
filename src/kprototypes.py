@@ -119,8 +119,21 @@ def main(args):
     train = pd.read_csv("src/data/model_ready/train_raw.csv")
 
     # define columns to ignore and the raw categorical columns
-    ignore_cols = ["SEQN", "diabetes"]
-    categorical_cols = ["DMDEDUC2", "RIAGENDR", "RIDRETH3"]
+    # cont cols are "RIDAGEYR", "LBXTC", "LBDHDD", "LBXSTR", "LBXSCR", "LBXHSCRP", "DBP_mean", "SBP_mean", "BMXBMI", "BMXHIP", "SMQ020"
+    ignore_cols = ["diabetes"]
+    categorical_cols = ["DMDEDUC2_1.0", 
+                        "DMDEDUC2_2.0",
+                        "DMDEDUC2_3.0",
+                        "DMDEDUC2_4.0",
+                        "DMDEDUC2_5.0",
+                        "DMDEDUC2_7.0",
+                        "RIDRETH3_9.0", 
+                        "RIDRETH3_1.0",
+                        "RIDRETH3_3.0", 
+                        "RIDRETH3_4.0", 
+                        "RIDRETH3_6.0", 
+                        "RIAGENDR_1.0", 
+                        "RIAGENDR_2.0"]
 
     # prepare feature matrix
     X_df = train.drop(columns=ignore_cols, errors='ignore')
