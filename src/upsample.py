@@ -11,11 +11,11 @@ def get_natural_kappas(training_data):
     """
     Helper function to calculate the natural minority/majority ratios in the dataset.
     """
-    target_count = training_data[training_data["RIDRETH3_3.0"] == 1].shape[0]
+    target_count = training_data[training_data["RIDRETH3"] == 3.0].shape[0]
     
-    kappa_1 = len(training_data[training_data["RIDRETH3_1.0"] == 1]) / target_count
-    kappa_4 = len(training_data[training_data["RIDRETH3_4.0"] == 1]) / target_count
-    kappa_6 = len(training_data[training_data["RIDRETH3_6.0"] == 1]) / target_count
+    kappa_1 = len(training_data[training_data["RIDRETH3"] == 1.0]) / target_count
+    kappa_4 = len(training_data[training_data["RIDRETH3"] == 4.0]) / target_count
+    kappa_6 = len(training_data[training_data["RIDRETH3"] == 6.0]) / target_count
     
     return kappa_1, kappa_4, kappa_6
 
