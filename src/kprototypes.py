@@ -114,10 +114,7 @@ def naive_upsample_clusters(df, cluster_col='Cluster'):
     train_upsampled = pd.concat(upsampled_dfs, ignore_index=True)
     return train_upsampled
 
-def main(args):
-    # load raw un-encoded data for K-Prototypes
-    train = pd.read_csv("src/data/model_ready/train_raw.csv")
-
+def run_k_prototypes(training_data, max_iter=150, n_clusters=3, print_every=10, gamma=1.0):
     # define columns to ignore and the raw categorical columns
     # cont cols are "RIDAGEYR", "LBXTC", "LBDHDD", "LBXSTR", "LBXSCR", "LBXHSCRP", "DBP_mean", "SBP_mean", "BMXBMI", "BMXHIP", "SMQ020"
     ignore_cols = ["diabetes"]
@@ -136,18 +133,18 @@ def main(args):
                         "RIAGENDR_2.0"]
 
     # prepare feature matrix
-    X_df = train.drop(columns=ignore_cols, errors='ignore')
+    X_df = training_data.drop(columns=ignore_cols, errors='ignore')
     data_matrix = X_df.values
 
     # map indices for the algorithm
     cat_indices = [X_df.columns.get_loc(col) for col in categorical_cols if col in X_df.columns]
     cont_indices = [i for i in range(data_matrix.shape[1]) if i not in cat_indices]
 
-    print(f"--- Running from-scratch K-PROTOTYPES with {args.n_clusters} clusters (Gamma: {args.gamma}) ---")
+    print(f"--- Running from-scratch K-PROTOTYPES with {n_clusters} clusters (Gamma: {gamma}) ---")
     
     # initialize
     print('[INFO] Centroids initialized')
-    centroids_init = init_centroids(args.n_clusters, data_matrix)
+    centroids_init = init_centroids(n_clusters, data_matrix)
 
     # update
     print('[INFO] Updating centroids ...')
@@ -156,37 +153,26 @@ def main(args):
         data_matrix, 
         cat_indices=cat_indices,
         cont_indices=cont_indices,
-        gamma=args.gamma,
-        max_iter=args.max_iter,
-        print_every=args.print_every
+        gamma=gamma,
+        max_iter=max_iter,
+        print_every=print_every
     )
 
     # attach labels to original dataframe
-    train['Cluster'] = cluster_labels
+    training_data['Cluster'] = cluster_labels
 
     print("\nCluster distribution before upsampling:")
-    print(train['Cluster'].value_counts().sort_index())
+    print(training_data['Cluster'].value_counts().sort_index())
     
     # upsample all minority clusters to match the largest one
     print("\nUpsampling minority clusters...")
-    train_upsampled = naive_upsample_clusters(train, cluster_col='Cluster')
+    train_upsampled = naive_upsample_clusters(training_data, cluster_col='Cluster')
     
     print("\nCluster distribution after upsampling:")
     print(train_upsampled['Cluster'].value_counts().sort_index())
     
     # drop cluster column so it doesn't leak into predictive models later
     train_upsampled = train_upsampled.drop(columns=['Cluster'])
+    print(f"\nCOMPLETE.")
 
-    output_filename = f"src/data/model_ready/train_upsampled_scratch_kprototypes.csv"
-    train_upsampled.to_csv(output_filename, index=False)
-    print(f"\nCOMPLETE. Saved to {output_filename}")
-
-
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--max_iter', type=int, default=150, help='Maximum number of iterations')
-    parser.add_argument('--n_clusters', type=int, default=3, help='Number of centroids/clusters')
-    parser.add_argument('--print_every', type=int, default=10, help='Iteration print frequency')
-    parser.add_argument('--gamma', type=float, default=1.0, help='Weight for categorical Hamming distance')
-    args = parser.parse_args()
-    main(args)
+    return train_upsampled
