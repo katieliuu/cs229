@@ -5,7 +5,6 @@ one-hot encoding on the categorical columns, and standardization onf the numeric
 Within both the inner and outer CV loop, both processing and evaluation are carried out. The cv_pipeline function
 takes in the experiment type as one of its arguments.
 """
-# remove penalty_weight from cost sensitive; need to add code that calcs weights for 
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import StratifiedKFold
@@ -15,7 +14,7 @@ from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from logreg.logreg_src import logistic_regression
 from upsample import naive_upsample, get_natural_kappas
 from logreg.util import calculate_sample_weight
-#from cluster import # fill later w any preprocessing/experiment specific functions
+from kprototypes import run_k_prototypes
 #from gmm import # fill later w any preprocessing/experiment specific functions
 from itertools import product
 import json
@@ -78,13 +77,13 @@ def cv_tune_pipeline(experiment_type = "baseline", n_splits = 5, inner_splits = 
     # compute natural kappas for upsampling
     nat_kap_1, nat_kap_4, nat_kap_6 = get_natural_kappas(X)
 
-    lambda_grid = [0.0, 1e-4, 1e-3, 1e-2, 1e-1, 1, 10]
-    threshold_grid = [0.3, 0.4, 0.5]
-    gamma_grid = []
-    n_clusters_grid = []
-    kappa_1_grid = [nat_kap_1, nat_kap_1 * 0.5, nat_kap_1 * 1.5]
-    kappa_4_grid = [nat_kap_4, nat_kap_4 * 0.5, nat_kap_4 * 1.5]
-    kappa_6_grid =  [nat_kap_6, nat_kap_6 * 0.5, nat_kap_6 * 1.5]
+    lambda_grid = [1e-2]
+    threshold_grid = [0.4]
+    gamma_grid = [0.5]
+    n_clusters_grid = [3]
+    kappa_1_grid = [nat_kap_1] #, nat_kap_1 * 1.5]
+    kappa_4_grid = [nat_kap_4] #, nat_kap_4 * 1.5]
+    kappa_6_grid =  [nat_kap_6] #, nat_kap_6 * 1.5]
 
     # INSERT GMM AND CLUSTERING PARAM GRIDS
     if experiment_type == "baseline":
@@ -112,8 +111,10 @@ def cv_tune_pipeline(experiment_type = "baseline", n_splits = 5, inner_splits = 
         score_star = -np.inf
         params_star = None
 
+        #print(f"param_grid is {param_grid}")
         # loop through all possible hyperparam combinations, do inner 3-fold cv on them
         for params in param_grid:
+            print(f"param is {params}")
             scores_inner = []
             for (train_idx_inner, val_idx_inner) in skf_inner.split(X_train_f, y_train_f):
                 X_train_f_inner = X_train_f.iloc[train_idx_inner]
@@ -162,6 +163,10 @@ def cv_tune_pipeline(experiment_type = "baseline", n_splits = 5, inner_splits = 
                 
                 elif experiment_type == "cluster":
                     # clustering code. do this before one hot encoding, after scaling/imputation?
+                    train_set_inner = pd.concat([X_train_inner_preprocessed, y_train_f_inner.rename("diabetes")], axis=1)
+                    train_set_inner = run_k_prototypes(train_set_inner, gamma = gamma, n_clusters = n_clusters)
+                    y_train_f_inner = train_set_inner["diabetes"]
+                    X_train_inner_preprocessed = train_set_inner.drop(columns=["diabetes"])
 
                 elif experiment_type == "cost_sensitive":
                     train_set_inner = pd.concat([X_train_inner_preprocessed, y_train_f_inner.rename("diabetes")], axis=1)
@@ -188,6 +193,7 @@ def cv_tune_pipeline(experiment_type = "baseline", n_splits = 5, inner_splits = 
                 score_star = mean_inner
                 params_star = params
 
+        print(f"params_star = {params_star}")
         # now that we have the best parameters, refit the model on outer train fold with those params
         # experiment-specific params: ADD GMM params
         if experiment_type == "baseline":
@@ -231,7 +237,10 @@ def cv_tune_pipeline(experiment_type = "baseline", n_splits = 5, inner_splits = 
             X_train_preprocessed = train_set.drop(columns=["diabetes"])
         
         elif experiment_type == "cluster":
-            # add clustering code
+            train_set = pd.concat([X_train_preprocessed, y_train_f.rename("diabetes")], axis=1)
+            train_set = run_k_prototypes(train_set, gamma = gamma, n_clusters = n_clusters)
+            y_train_f = train_set["diabetes"]
+            X_train_preprocessed = train_set.drop(columns=["diabetes"])
 
         elif experiment_type == "cost_sensitive":
             train_set = pd.concat([X_train_preprocessed, y_train_f.rename("diabetes")], axis=1)
@@ -256,9 +265,9 @@ def cv_tune_pipeline(experiment_type = "baseline", n_splits = 5, inner_splits = 
                         "inner_f1_star": score_star,
                         "lambda_reg": lambda_reg,
                         "threshold": threshold,
-                        "sample_weight": sample_weight,
                         "gamma": gamma,
                         "n_clusters": n_clusters})
+        #"sample_weight": sample_weight,
         
     fold_metrics = pd.DataFrame(metrics)
 

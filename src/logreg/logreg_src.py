@@ -67,7 +67,7 @@ def logistic_regression(X_train, Y_train, max_iter=5000, lambda_reg=0.0,
             print(f"Converged in {i} iterations")
             break
 
-    return theta, loss
+    return theta
 
 '''
 def main():
