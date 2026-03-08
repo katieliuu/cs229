@@ -1,0 +1,54 @@
+{
+    "experiment_type": "cluster",
+    "fold_metrics": [
+        {
+            "fold": 0,
+            "f1": 0.7557535263548626,
+            "inner_f1_star": 0.7604852593431563,
+            "lambda_reg": 0.01,
+            "threshold": 0.4,
+            "gamma": 0.5,
+            "n_clusters": 3
+        },
+        {
+            "fold": 1,
+            "f1": 0.757754800590842,
+            "inner_f1_star": 0.7470750943894203,
+            "lambda_reg": 0.01,
+            "threshold": 0.4,
+            "gamma": 0.5,
+            "n_clusters": 3
+        },
+        {
+            "fold": 2,
+            "f1": 0.7551175132676271,
+            "inner_f1_star": 0.7586367493317098,
+            "lambda_reg": 0.01,
+            "threshold": 0.4,
+            "gamma": 0.5,
+            "n_clusters": 3
+        },
+        {
+            "fold": 3,
+            "f1": 0.7637969094922737,
+            "inner_f1_star": 0.7626477726587336,
+            "lambda_reg": 0.01,
+            "threshold": 0.4,
+            "gamma": 0.5,
+            "n_clusters": 3
+        },
+        {
+            "fold": 4,
+            "f1": 0.7756939234808702,
+            "inner_f1_star": 0.7486729560072862,
+            "lambda_reg": 0.01,
+            "threshold": 0.4,
+            "gamma": 0.5,
+            "n_clusters": 3
+        }
+    ],
+    "summary": {
+        "f1_mean": 0.7616233346372951,
+        "f1_std": 0.008579799162717096
+    }
+}

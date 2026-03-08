@@ -1,0 +1,64 @@
+{
+    "experiment_type": "cluster",
+    "fold_metrics": [
+        {
+            "fold": 0,
+            "f1": 0.7789165446559296,
+            "inner_f1_star": 0.7632790876535185,
+            "max_depth": 4,
+            "min_samples_split": 8,
+            "min_samples_leaf": 6,
+            "threshold": 0.4,
+            "gamma": 0.5,
+            "n_clusters": 3
+        },
+        {
+            "fold": 1,
+            "f1": 0.7300850734725444,
+            "inner_f1_star": 0.7622268913634818,
+            "max_depth": 4,
+            "min_samples_split": 8,
+            "min_samples_leaf": 6,
+            "threshold": 0.4,
+            "gamma": 0.5,
+            "n_clusters": 3
+        },
+        {
+            "fold": 2,
+            "f1": 0.7648351648351648,
+            "inner_f1_star": 0.7597346074511294,
+            "max_depth": 4,
+            "min_samples_split": 8,
+            "min_samples_leaf": 6,
+            "threshold": 0.4,
+            "gamma": 0.5,
+            "n_clusters": 3
+        },
+        {
+            "fold": 3,
+            "f1": 0.7646622123236823,
+            "inner_f1_star": 0.7570742024613547,
+            "max_depth": 4,
+            "min_samples_split": 8,
+            "min_samples_leaf": 6,
+            "threshold": 0.4,
+            "gamma": 0.5,
+            "n_clusters": 3
+        },
+        {
+            "fold": 4,
+            "f1": 0.7849384503982622,
+            "inner_f1_star": 0.7665719303687729,
+            "max_depth": 4,
+            "min_samples_split": 8,
+            "min_samples_leaf": 6,
+            "threshold": 0.4,
+            "gamma": 0.5,
+            "n_clusters": 3
+        }
+    ],
+    "summary": {
+        "f1_mean": 0.7646874891371167,
+        "f1_std": 0.02127156006156346
+    }
+}

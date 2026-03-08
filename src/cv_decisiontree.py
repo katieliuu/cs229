@@ -1,17 +1,10 @@
-"""
-05_transform_and_cv carries out 5-fold CV with hyperparameter tuning on the training set. It fits and applies
-the full preprocessing pipeline: MICE (iterative imputation) on the numeric columns,
-one-hot encoding on the categorical columns, and standardization onf the numeric features.
-Within both the inner and outer CV loop, both processing and evaluation are carried out. The cv_pipeline function
-takes in the experiment type as one of its arguments.
-"""
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import StratifiedKFold
 from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import IterativeImputer
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
-from logreg.logreg_src import logistic_regression
+from sklearn.tree import DecisionTreeClassifier
 from upsample import naive_upsample, get_natural_kappas
 from logreg.util import calculate_sample_weight
 from kprototypes import run_k_prototypes
@@ -68,7 +61,7 @@ def f1_from_probs(y_true, probs, threshold):
         f1 = 2 * precision * recall / (precision + recall)
     return f1
 
-def cv_tune_pipeline(experiment_type = "baseline", n_splits = 5, inner_splits = 3, random_state = 3):
+def cv_tune_pipeline_dt(experiment_type = "baseline", n_splits = 5, inner_splits = 3, random_state = 3):
 
     df = pd.read_csv("src/data/model_ready/train_raw.csv")
     y = df["diabetes"].astype(int)
@@ -77,7 +70,9 @@ def cv_tune_pipeline(experiment_type = "baseline", n_splits = 5, inner_splits = 
     # compute natural kappas for upsampling
     nat_kap_1, nat_kap_4, nat_kap_6 = get_natural_kappas(X)
 
-    lambda_grid = [1e-2]
+    max_depth_grid = [4]
+    min_samples_split_grid = [8]
+    min_samples_leaf_grid = [6]
     threshold_grid = [0.4]
     gamma_grid = [0.5]
     n_clusters_grid = [3]
@@ -85,15 +80,15 @@ def cv_tune_pipeline(experiment_type = "baseline", n_splits = 5, inner_splits = 
     kappa_4_grid = [nat_kap_4] #, nat_kap_4 * 1.5]
     kappa_6_grid =  [nat_kap_6] #, nat_kap_6 * 1.5]
 
-    # INSERT GMM AND CLUSTERING PARAM GRIDS
+    # INSERT GMM PARAM GRIDS
     if experiment_type == "baseline":
-        param_grid = list(product(lambda_grid, threshold_grid))
+        param_grid = list(product(max_depth_grid, min_samples_split_grid, min_samples_leaf_grid, threshold_grid))
     elif experiment_type == "upsample":
-        param_grid = list(product(lambda_grid, threshold_grid, kappa_1_grid, kappa_4_grid, kappa_6_grid))
+        param_grid = list(product(max_depth_grid, min_samples_split_grid, min_samples_leaf_grid, threshold_grid, kappa_1_grid, kappa_4_grid, kappa_6_grid))
     elif experiment_type == "cluster":
-        param_grid = list(product(gamma_grid, n_clusters_grid, lambda_grid, threshold_grid))
+        param_grid = list(product(max_depth_grid, min_samples_split_grid, min_samples_leaf_grid, gamma_grid, n_clusters_grid, threshold_grid))
     elif experiment_type == "cost_sensitive":
-        param_grid = list(product(lambda_grid, threshold_grid))
+        param_grid = list(product(max_depth_grid, min_samples_split_grid, min_samples_leaf_grid, threshold_grid))
 
     # outer cv starts here: evaluation using tuned params
     # gives train/val indices to split data in a stratified way (preserves the percentage of samples for each of diabetes/no diabetes)
@@ -124,7 +119,7 @@ def cv_tune_pipeline(experiment_type = "baseline", n_splits = 5, inner_splits = 
 
                 # experiment-specific params: ADD GMM and CLUSTERING params
                 if experiment_type == "baseline":
-                    lambda_reg, threshold = params
+                    max_depth, min_samples_split, min_samples_leaf, threshold = params
                     gamma = None
                     n_clusters = None
                     kappa_1 = None
@@ -132,18 +127,18 @@ def cv_tune_pipeline(experiment_type = "baseline", n_splits = 5, inner_splits = 
                     kappa_6 = None
                     sample_weight = None
                 elif experiment_type == "upsample":
-                    lambda_reg, threshold, kappa_1, kappa_4, kappa_6 = params
+                    max_depth, min_samples_split, min_samples_leaf, threshold, kappa_1, kappa_4, kappa_6 = params
                     gamma = None
                     n_clusters = None
                     sample_weight = None
                 elif experiment_type == "cluster":
-                    gamma, n_clusters, lambda_reg, threshold = params
+                    max_depth, min_samples_split, min_samples_leaf, gamma, n_clusters, threshold = params
                     kappa_1 = None
                     kappa_4 = None
                     kappa_6 = None
                     sample_weight = None
                 elif experiment_type == "cost_sensitive":
-                    lambda_reg, threshold = params
+                    max_depth, min_samples_split, min_samples_leaf, threshold = params
                     gamma = None
                     n_clusters = None
                     kappa_1 = None
@@ -176,15 +171,18 @@ def cv_tune_pipeline(experiment_type = "baseline", n_splits = 5, inner_splits = 
 
                 # inner model fit ADD GMM
                 if experiment_type in ["baseline", "upsample", "cluster"]:
-                    theta = logistic_regression(X_train_inner_preprocessed.to_numpy(), y_train_f_inner.to_numpy(),
-                                                lambda_reg = lambda_reg)
+                    tree = DecisionTreeClassifier(max_depth=max_depth, min_samples_split=min_samples_split,
+                                                  min_samples_leaf=min_samples_leaf, random_state=random_state)
+                    tree.fit(X_train_inner_preprocessed, y_train_f_inner)
+
                 # change to account for penalty weight calculations
                 elif experiment_type == "cost_sensitive":
-                    theta = logistic_regression(X_train_inner_preprocessed.to_numpy(), y_train_f_inner.to_numpy(),
-                                        sample_weight = sample_weight, lambda_reg = lambda_reg)
+                    tree = DecisionTreeClassifier(max_depth=max_depth, min_samples_split=min_samples_split,
+                                                  min_samples_leaf=min_samples_leaf, random_state=random_state)
+                    tree.fit(X_train_inner_preprocessed, y_train_f_inner, sample_weight=sample_weight)
                     
                 # prediction and score for inner loop
-                probs = 1 / (1 + np.exp(-(X_val_inner_preprocessed.to_numpy() @ theta)))
+                probs = tree.predict_proba(X_val_inner_preprocessed)[:, 1]
                 scores_inner.append(f1_from_probs(y_val_f_inner, probs, threshold))
 
             # running update of optimal parameters
@@ -197,7 +195,7 @@ def cv_tune_pipeline(experiment_type = "baseline", n_splits = 5, inner_splits = 
         # now that we have the best parameters, refit the model on outer train fold with those params
         # experiment-specific params: ADD GMM params
         if experiment_type == "baseline":
-            lambda_reg, threshold = params_star
+            max_depth, min_samples_split, min_samples_leaf, threshold = params_star
             gamma = None
             n_clusters = None
             kappa_1 = None
@@ -205,18 +203,18 @@ def cv_tune_pipeline(experiment_type = "baseline", n_splits = 5, inner_splits = 
             kappa_6 = None
             sample_weight = None
         elif experiment_type == "upsample":
-            lambda_reg, threshold, kappa_1, kappa_4, kappa_6 = params_star
+            max_depth, min_samples_split, min_samples_leaf, threshold, kappa_1, kappa_4, kappa_6 = params_star
             gamma = None
             n_clusters = None
             sample_weight = None
         elif experiment_type == "cluster":
-            gamma, n_clusters, lambda_reg, threshold = params_star
+            max_depth, min_samples_split, min_samples_leaf, gamma, n_clusters, threshold = params_star
             kappa_1 = None
             kappa_4 = None
             kappa_6 = None
             sample_weight = None
         elif experiment_type == "cost_sensitive":
-            lambda_reg, threshold = params_star
+            max_depth, min_samples_split, min_samples_leaf, threshold = params_star
             gamma = None
             n_clusters = None
             kappa_1 = None
@@ -250,20 +248,25 @@ def cv_tune_pipeline(experiment_type = "baseline", n_splits = 5, inner_splits = 
 
         # INSERT UPSAMPLING LOGIC FOR GMM
         if experiment_type in ["baseline", "upsample", "cluster"]:
-            theta = logistic_regression(X_train_preprocessed.to_numpy(), y_train_f.to_numpy(), lambda_reg=lambda_reg)
+            tree = DecisionTreeClassifier(max_depth=max_depth, min_samples_split=min_samples_split,
+                                        min_samples_leaf=min_samples_leaf, random_state=random_state)
+            tree.fit(X_train_preprocessed, y_train_f)
 
         elif experiment_type == "cost_sensitive":
-            theta = logistic_regression(X_train_preprocessed.to_numpy(), y_train_f.to_numpy(),
-                                        sample_weight = sample_weight, lambda_reg = lambda_reg)
+            tree = DecisionTreeClassifier(max_depth=max_depth, min_samples_split=min_samples_split,
+                                        min_samples_leaf=min_samples_leaf, random_state=random_state)
+            tree.fit(X_train_preprocessed, y_train_f, sample_weight=sample_weight)
 
         # outer fold evaluation
-        probs = 1 / (1 + np.exp(-(X_val_preprocessed.to_numpy() @ theta)))
+        probs = tree.predict_proba(X_val_preprocessed)[:, 1]
         f1 = f1_from_probs(y_val_f, probs, threshold)
 
         # dict of metrics for each fold
         metrics.append({"fold": f, "f1": f1,
                         "inner_f1_star": score_star,
-                        "lambda_reg": lambda_reg,
+                        "max_depth": max_depth,
+                        "min_samples_split": min_samples_split,
+                        "min_samples_leaf": min_samples_leaf,
                         "threshold": threshold,
                         "gamma": gamma,
                         "n_clusters": n_clusters})
@@ -278,37 +281,37 @@ def cv_tune_pipeline(experiment_type = "baseline", n_splits = 5, inner_splits = 
                      "f1_std": fold_metrics["f1"].std()}}
 
 def main():
-    baseline_metrics_dict = cv_tune_pipeline()
+    baseline_metrics_dict = cv_tune_pipeline_dt()
     baseline_metrics_dict["fold_metrics"] = baseline_metrics_dict["fold_metrics"].to_dict(orient="records")
 
-    baseline_save_path = 'src/metrics/baseline_log_reg_parameters.json'
+    baseline_save_path = 'src/metrics/baseline_dt_parameters.json'
     with open(baseline_save_path, mode = 'w') as file:
         json.dump(baseline_metrics_dict, file, indent = 4)
 
     print(f"JSON file '{baseline_save_path}' created successfully")
 
-    upsample_metrics_dict = cv_tune_pipeline(experiment_type="upsample")
+    upsample_metrics_dict = cv_tune_pipeline_dt(experiment_type="upsample")
     upsample_metrics_dict["fold_metrics"] = upsample_metrics_dict["fold_metrics"].to_dict(orient="records")
 
-    upsample_save_path = 'src/metrics/upsample_log_reg_parameters.json'
+    upsample_save_path = 'src/metrics/upsample_dt_parameters.json'
     with open(upsample_save_path, mode = 'w') as file:
         json.dump(upsample_metrics_dict, file, indent = 4)
 
     print(f"JSON file '{upsample_save_path}' created successfully")
 
-    cluster_metrics_dict = cv_tune_pipeline(experiment_type="cluster")
+    cluster_metrics_dict = cv_tune_pipeline_dt(experiment_type="cluster")
     cluster_metrics_dict["fold_metrics"] = cluster_metrics_dict["fold_metrics"].to_dict(orient="records")
 
-    cluster_save_path = 'src/metrics/cluster_log_reg_parameters.json'
+    cluster_save_path = 'src/metrics/cluster_dt_parameters.json'
     with open(cluster_save_path, mode = 'w') as file:
         json.dump(cluster_metrics_dict, file, indent = 4)
 
     print(f"JSON file '{cluster_save_path}' created successfully")
 
-    cost_metrics_dict = cv_tune_pipeline(experiment_type="cost_sensitive")
+    cost_metrics_dict = cv_tune_pipeline_dt(experiment_type="cost_sensitive")
     cost_metrics_dict["fold_metrics"] = cost_metrics_dict["fold_metrics"].to_dict(orient="records")
 
-    cost_save_path = 'src/metrics/cost_log_reg_parameters.json'
+    cost_save_path = 'src/metrics/cost_dt_parameters.json'
     with open(cost_save_path, mode = 'w') as file:
         json.dump(cost_metrics_dict, file, indent = 4)
 
