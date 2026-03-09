@@ -23,10 +23,9 @@ def main():
     training_data = np.concatenate((X_original, Y_original), axis=1)
     upsampled_training = naive_upsample(training_data, kappa_1, kappa_4, kappa_6) #TODO: add kappa values from cv
     X_upsampled, Y_upsampled = upsampled_training.drop(columns=["diabetes"]), upsampled_training["diabetes"]
-    final_loss_up_naive, theta_up_naive = logistic_regression(X_upsampled, Y_upsampled, max_iter=5000, lambda_reg=10, penalty_weight=1) #TODO: add hyperparameter from Charlotte's CV results
+    theta_up_naive = logistic_regression(X_upsampled, Y_upsampled, max_iter=5000, lambda_reg=10, penalty_weight=1) #TODO: add hyperparameter from Charlotte's CV results
     
     
-    print(f'Naive upsampling final loss: {final_loss_up_naive}')
     
 if __name__ == '__main__':
     main()
