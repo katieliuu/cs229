@@ -77,13 +77,13 @@ def cv_tune_pipeline_logreg(experiment_type = "baseline", n_splits = 5, inner_sp
     # compute natural kappas for upsampling
     nat_kap_1, nat_kap_4, nat_kap_6 = get_natural_kappas(X)
 
-    lambda_grid = [1e-2]
-    threshold_grid = [0.4]
-    gamma_grid = [0.5]
-    n_clusters_grid = [3]
-    kappa_1_grid = [nat_kap_1] #, nat_kap_1 * 1.5]
-    kappa_4_grid = [nat_kap_4] #, nat_kap_4 * 1.5]
-    kappa_6_grid =  [nat_kap_6] #, nat_kap_6 * 1.5]
+    lambda_grid = [0, 0.01, 0.1, 1, 10]
+    threshold_grid = [0.3, 0.4, 0.5]
+    gamma_grid = [0.25, 0.5, 1, 2]
+    n_clusters_grid = [3, 4, 5, 6]
+    kappa_1_grid = [nat_kap_1, nat_kap_1 * 0.5, nat_kap_1 * 1.5]
+    kappa_4_grid = [nat_kap_4, nat_kap_4 * 0.5, nat_kap_4 * 1.5]
+    kappa_6_grid =  [nat_kap_6, nat_kap_6 * 0.5, nat_kap_6 * 1.5]
 
     # INSERT GMM AND CLUSTERING PARAM GRIDS
     if experiment_type == "baseline":
@@ -114,7 +114,7 @@ def cv_tune_pipeline_logreg(experiment_type = "baseline", n_splits = 5, inner_sp
         #print(f"param_grid is {param_grid}")
         # loop through all possible hyperparam combinations, do inner 3-fold cv on them
         for params in param_grid:
-            print(f"param is {params}")
+            #print(f"param is {params}")
             scores_inner = []
             for (train_idx_inner, val_idx_inner) in skf_inner.split(X_train_f, y_train_f):
                 X_train_f_inner = X_train_f.iloc[train_idx_inner]
@@ -193,7 +193,7 @@ def cv_tune_pipeline_logreg(experiment_type = "baseline", n_splits = 5, inner_sp
                 score_star = mean_inner
                 params_star = params
 
-        print(f"params_star = {params_star}")
+        #print(f"params_star = {params_star}")
         # now that we have the best parameters, refit the model on outer train fold with those params
         # experiment-specific params: ADD GMM params
         if experiment_type == "baseline":

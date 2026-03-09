@@ -17,7 +17,7 @@ def get_natural_kappas(training_data):
     kappa_4 = len(training_data[training_data["RIDRETH3"] == 4.0]) / target_count
     kappa_6 = len(training_data[training_data["RIDRETH3"] == 6.0]) / target_count
 
-    print(f"natural kappas are kappa_1 = {kappa_1}, kappa_4 = {kappa_4}, kappa_6 = {kappa_6}")
+    #print(f"natural kappas are kappa_1 = {kappa_1}, kappa_4 = {kappa_4}, kappa_6 = {kappa_6}")
     
     return kappa_1, kappa_4, kappa_6
 
@@ -49,6 +49,6 @@ def naive_upsample(training_data, kappa_1, kappa_4, kappa_6):
         minority_6_repeated
     ], ignore_index=True)
 
-    print(f"finished upsampling for kappa_1 = {kappa_1}, kappa_4 = {kappa_4}, kappa_6 = {kappa_6}")
+    #print(f"finished upsampling for kappa_1 = {kappa_1}, kappa_4 = {kappa_4}, kappa_6 = {kappa_6}")
     return train_upsampled
     

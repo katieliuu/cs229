@@ -3,52 +3,52 @@
     "fold_metrics": [
         {
             "fold": 0,
-            "f1": 0.7544642857142857,
-            "inner_f1_star": 0.7606744791978853,
-            "lambda_reg": 0.01,
+            "f1": 0.7554225878833208,
+            "inner_f1_star": 0.7607439351953743,
+            "lambda_reg": 0,
             "threshold": 0.4,
             "gamma": null,
             "n_clusters": null
         },
         {
             "fold": 1,
-            "f1": 0.7621861152141801,
-            "inner_f1_star": 0.7591696131835289,
-            "lambda_reg": 0.01,
+            "f1": 0.7616926503340757,
+            "inner_f1_star": 0.760453110085066,
+            "lambda_reg": 0,
             "threshold": 0.4,
             "gamma": null,
             "n_clusters": null
         },
         {
             "fold": 2,
-            "f1": 0.7556904400606981,
-            "inner_f1_star": 0.7626976424193069,
-            "lambda_reg": 0.01,
+            "f1": 0.7620504973221116,
+            "inner_f1_star": 0.7648681520486577,
+            "lambda_reg": 0,
             "threshold": 0.4,
             "gamma": null,
             "n_clusters": null
         },
         {
             "fold": 3,
-            "f1": 0.7586206896551724,
-            "inner_f1_star": 0.7634395484350996,
-            "lambda_reg": 0.01,
+            "f1": 0.76,
+            "inner_f1_star": 0.7637249207551444,
+            "lambda_reg": 0,
             "threshold": 0.4,
             "gamma": null,
             "n_clusters": null
         },
         {
             "fold": 4,
-            "f1": 0.7733732236350037,
-            "inner_f1_star": 0.754770728658046,
-            "lambda_reg": 0.01,
+            "f1": 0.7744360902255638,
+            "inner_f1_star": 0.7575554148140257,
+            "lambda_reg": 0,
             "threshold": 0.4,
             "gamma": null,
             "n_clusters": null
         }
     ],
     "summary": {
-        "f1_mean": 0.760866950855868,
-        "f1_std": 0.007599064543413985
+        "f1_mean": 0.7627203651530143,
+        "f1_std": 0.007060826337605579
     }
 }

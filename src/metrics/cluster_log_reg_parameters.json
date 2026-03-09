@@ -3,52 +3,52 @@
     "fold_metrics": [
         {
             "fold": 0,
-            "f1": 0.7557535263548626,
-            "inner_f1_star": 0.7604852593431563,
-            "lambda_reg": 0.01,
+            "f1": 0.7477341389728096,
+            "inner_f1_star": 0.7660020109932687,
+            "lambda_reg": 0,
             "threshold": 0.4,
-            "gamma": 0.5,
-            "n_clusters": 3
+            "gamma": 0.25,
+            "n_clusters": 4
         },
         {
             "fold": 1,
-            "f1": 0.757754800590842,
-            "inner_f1_star": 0.7470750943894203,
-            "lambda_reg": 0.01,
+            "f1": 0.7623982235381199,
+            "inner_f1_star": 0.7654142590742846,
+            "lambda_reg": 0,
             "threshold": 0.4,
             "gamma": 0.5,
-            "n_clusters": 3
+            "n_clusters": 6
         },
         {
             "fold": 2,
-            "f1": 0.7551175132676271,
-            "inner_f1_star": 0.7586367493317098,
-            "lambda_reg": 0.01,
+            "f1": 0.7603053435114503,
+            "inner_f1_star": 0.7688606719443002,
+            "lambda_reg": 0,
             "threshold": 0.4,
-            "gamma": 0.5,
+            "gamma": 0.25,
             "n_clusters": 3
         },
         {
             "fold": 3,
-            "f1": 0.7637969094922737,
-            "inner_f1_star": 0.7626477726587336,
-            "lambda_reg": 0.01,
+            "f1": 0.7578008915304607,
+            "inner_f1_star": 0.7670765855431408,
+            "lambda_reg": 0,
             "threshold": 0.4,
-            "gamma": 0.5,
+            "gamma": 1.0,
             "n_clusters": 3
         },
         {
             "fold": 4,
-            "f1": 0.7756939234808702,
-            "inner_f1_star": 0.7486729560072862,
-            "lambda_reg": 0.01,
-            "threshold": 0.4,
-            "gamma": 0.5,
+            "f1": 0.7634854771784233,
+            "inner_f1_star": 0.7598477904742428,
+            "lambda_reg": 0,
+            "threshold": 0.3,
+            "gamma": 1.0,
             "n_clusters": 3
         }
     ],
     "summary": {
-        "f1_mean": 0.7616233346372951,
-        "f1_std": 0.008579799162717096
+        "f1_mean": 0.7583448149462527,
+        "f1_std": 0.006316298341364454
     }
 }
