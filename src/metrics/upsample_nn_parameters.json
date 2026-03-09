@@ -1,0 +1,84 @@
+{
+    "experiment_type": "upsample",
+    "fold_metrics": [
+        {
+            "fold": 0,
+            "f1": 0.7471029311520109,
+            "inner_f1_star": 0.7142487119028601,
+            "lr": 0.1,
+            "hidden_width": 8,
+            "weight_decay": 0.0001,
+            "dropout": 0.2,
+            "batch_size": 500,
+            "activation": "sigmoid",
+            "num_epochs": 30,
+            "threshold": 0.4,
+            "gamma": null,
+            "n_clusters": null
+        },
+        {
+            "fold": 1,
+            "f1": 0.70703125,
+            "inner_f1_star": 0.703783874920339,
+            "lr": 0.1,
+            "hidden_width": 8,
+            "weight_decay": 0.0001,
+            "dropout": 0.2,
+            "batch_size": 500,
+            "activation": "sigmoid",
+            "num_epochs": 30,
+            "threshold": 0.4,
+            "gamma": null,
+            "n_clusters": null
+        },
+        {
+            "fold": 2,
+            "f1": 0.7314685314685315,
+            "inner_f1_star": 0.7199402879920539,
+            "lr": 0.1,
+            "hidden_width": 8,
+            "weight_decay": 0.0001,
+            "dropout": 0.2,
+            "batch_size": 500,
+            "activation": "sigmoid",
+            "num_epochs": 30,
+            "threshold": 0.4,
+            "gamma": null,
+            "n_clusters": null
+        },
+        {
+            "fold": 3,
+            "f1": 0.7163798597833015,
+            "inner_f1_star": 0.7191880406782355,
+            "lr": 0.1,
+            "hidden_width": 8,
+            "weight_decay": 0.0001,
+            "dropout": 0.2,
+            "batch_size": 500,
+            "activation": "sigmoid",
+            "num_epochs": 30,
+            "threshold": 0.4,
+            "gamma": null,
+            "n_clusters": null
+        },
+        {
+            "fold": 4,
+            "f1": 0.7437325905292479,
+            "inner_f1_star": 0.7184447294006193,
+            "lr": 0.1,
+            "hidden_width": 8,
+            "weight_decay": 0.0001,
+            "dropout": 0.2,
+            "batch_size": 500,
+            "activation": "sigmoid",
+            "num_epochs": 30,
+            "threshold": 0.4,
+            "gamma": null,
+            "n_clusters": null
+        }
+    ],
+    "summary": {
+        "f1_mean": 0.7291430325866183,
+        "f1_std": 0.01726738697411624
+    }
+}
