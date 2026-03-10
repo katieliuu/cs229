@@ -67,32 +67,14 @@ def cv_tune_pipeline_dt(experiment_type = "baseline", n_splits = 5, inner_splits
     y = df["diabetes"].astype(int)
     X = df.drop(columns=["diabetes"])
 
-    # compute natural kappas for upsampling
-    nat_kap_1, nat_kap_4, nat_kap_6 = get_natural_kappas(X)
-
-    max_depth_grid = [4]
-    min_samples_split_grid = [8]
-    min_samples_leaf_grid = [6]
-    threshold_grid = [0.4]
-    gamma_grid = [0.5]
-    n_clusters_grid = [3]
-    n_comps_grid = [3, 4, 5, 6]
-    kappa_1_grid = [nat_kap_1, nat_kap_1 * 0.5, nat_kap_1 * 1.5]
-    kappa_4_grid = [nat_kap_4, nat_kap_4 * 0.5, nat_kap_4 * 1.5]
-    kappa_6_grid =  [nat_kap_6, nat_kap_6 * 0.5, nat_kap_6 * 1.5]
-
-    # INSERT GMM PARAM GRIDS
-    if experiment_type == "baseline":
-        param_grid = list(product(max_depth_grid, min_samples_split_grid, min_samples_leaf_grid, threshold_grid))
-    elif experiment_type == "upsample":
-        param_grid = list(product(max_depth_grid, min_samples_split_grid, min_samples_leaf_grid, threshold_grid, kappa_1_grid, kappa_4_grid, kappa_6_grid))
-    elif experiment_type == "cluster":
-        param_grid = list(product(max_depth_grid, min_samples_split_grid, min_samples_leaf_grid, gamma_grid, n_clusters_grid, threshold_grid))
-    elif experiment_type == "cost_sensitive":
-        param_grid = list(product(max_depth_grid, min_samples_split_grid, min_samples_leaf_grid, threshold_grid))
-    elif experiment_type == "gmm":
-        param_grid = list(product(max_depth_grid, min_samples_split_grid, min_samples_leaf_grid, threshold_grid, n_comps_grid))
-
+    max_depth_grid = [3, 4, 5, 6, 8, 10, None]
+    min_samples_split_grid = [2, 5, 10, 20]
+    min_samples_leaf_grid = [1, 2, 5, 10]
+    threshold_grid = [0.25, 0.35, 0.45, 0.55]
+    gamma_grid = [0.5, 1.0, 1.5]
+    n_clusters_grid = [3, 4, 5]
+    n_comps_grid = [2, 3, 4, 5, 6]
+    
     # outer cv starts here: evaluation using tuned params
     # gives train/val indices to split data in a stratified way (preserves the percentage of samples for each of diabetes/no diabetes)
     skf_outer = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=random_state)
@@ -105,6 +87,24 @@ def cv_tune_pipeline_dt(experiment_type = "baseline", n_splits = 5, inner_splits
         X_val_f = X.iloc[val_idx]
         y_val_f = y.iloc[val_idx]
 
+        # compute natural kappas for upsampling
+        nat_kap_1, nat_kap_4, nat_kap_6 = get_natural_kappas(X_train_f)
+        kappa_1_grid = [nat_kap_1, nat_kap_1 * 1.5]
+        kappa_4_grid = [nat_kap_4, nat_kap_4 * 1.5]
+        kappa_6_grid =  [nat_kap_6, nat_kap_6 * 1.5]
+
+    # define param grids
+        if experiment_type == "baseline":
+            param_grid = list(product(max_depth_grid, min_samples_split_grid, min_samples_leaf_grid, threshold_grid))
+        elif experiment_type == "upsample":
+            param_grid = list(product(max_depth_grid, min_samples_split_grid, min_samples_leaf_grid, threshold_grid, kappa_1_grid, kappa_4_grid, kappa_6_grid))
+        elif experiment_type == "cluster":
+            param_grid = list(product(max_depth_grid, min_samples_split_grid, min_samples_leaf_grid, gamma_grid, n_clusters_grid, threshold_grid))
+        elif experiment_type == "cost_sensitive":
+            param_grid = list(product(max_depth_grid, min_samples_split_grid, min_samples_leaf_grid, threshold_grid))
+        elif experiment_type == "gmm":
+            param_grid = list(product(max_depth_grid, min_samples_split_grid, min_samples_leaf_grid, threshold_grid, n_comps_grid))
+
         skf_inner = StratifiedKFold(n_splits=inner_splits, shuffle=True, random_state=random_state)
         score_star = -np.inf
         params_star = None
@@ -112,7 +112,7 @@ def cv_tune_pipeline_dt(experiment_type = "baseline", n_splits = 5, inner_splits
         #print(f"param_grid is {param_grid}")
         # loop through all possible hyperparam combinations, do inner 3-fold cv on them
         for params in param_grid:
-            print(f"param is {params}")
+            #print(f"param is {params}")
             scores_inner = []
             for (train_idx_inner, val_idx_inner) in skf_inner.split(X_train_f, y_train_f):
                 X_train_f_inner = X_train_f.iloc[train_idx_inner]
@@ -212,7 +212,7 @@ def cv_tune_pipeline_dt(experiment_type = "baseline", n_splits = 5, inner_splits
                 score_star = mean_inner
                 params_star = params
 
-        print(f"params_star = {params_star}")
+        #print(f"params_star = {params_star}")
         # now that we have the best parameters, refit the model on outer train fold with those params
         # experiment-specific params: ADD GMM params
         if experiment_type == "baseline":

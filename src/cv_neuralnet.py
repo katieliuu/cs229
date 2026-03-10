@@ -100,35 +100,17 @@ def cv_tune_pipeline_nn(experiment_type = "baseline", n_splits = 5, inner_splits
     y = df["diabetes"].astype(int)
     X = df.drop(columns=["diabetes"])
 
-    # compute natural kappas for upsampling
-    nat_kap_1, nat_kap_4, nat_kap_6 = get_natural_kappas(X)
-
-    lr_grid = [0.1]
-    hidden_width_grid = [8]
-    weight_decay_grid = [0.0001]
-    dropout_grid = [0.2]
-    batch_size_grid = [500]
-    activation_grid = ['sigmoid']
-    num_epochs_grid = [30]
-    threshold_grid = [0.4]
-    n_comps_grid = [3, 4, 5, 6]
-    gamma_grid = [0.5]
-    n_clusters_grid = [3]
-    kappa_1_grid = [nat_kap_1, nat_kap_1 * 0.5, nat_kap_1 * 1.5]
-    kappa_4_grid = [nat_kap_4, nat_kap_4 * 0.5, nat_kap_4 * 1.5]
-    kappa_6_grid =  [nat_kap_6, nat_kap_6 * 0.5, nat_kap_6 * 1.5]
-
-    # define parameter grids
-    if experiment_type == "baseline":
-        param_grid = list(product(lr_grid, hidden_width_grid, weight_decay_grid, dropout_grid, batch_size_grid, activation_grid, num_epochs_grid, threshold_grid))
-    elif experiment_type == "upsample":
-        param_grid = list(product(lr_grid, hidden_width_grid, weight_decay_grid, dropout_grid, batch_size_grid, activation_grid, num_epochs_grid, threshold_grid, kappa_1_grid, kappa_4_grid, kappa_6_grid))
-    elif experiment_type == "cluster":
-        param_grid = list(product(lr_grid, hidden_width_grid, weight_decay_grid, dropout_grid, batch_size_grid, activation_grid, num_epochs_grid, gamma_grid, n_clusters_grid, threshold_grid))
-    elif experiment_type == "cost_sensitive":
-        param_grid = list(product(lr_grid, hidden_width_grid, weight_decay_grid, dropout_grid, batch_size_grid, activation_grid, num_epochs_grid, threshold_grid))
-    elif experiment_type == "gmm":
-        param_grid = list(product(lr_grid, hidden_width_grid, weight_decay_grid, dropout_grid, batch_size_grid, activation_grid, num_epochs_grid, threshold_grid, n_comps_grid))
+    lr_grid = [0.01, 0.03, 0.05]
+    hidden_width_grid = [16, 32, 64]
+    weight_decay_grid = [0.0, 1e-4, 1e-3]
+    dropout_grid = [0.0, 0.2]
+    batch_size_grid = [64, 128]
+    activation_grid = ['relu', 'sigmoid']
+    num_epochs_grid = [30, 50]
+    threshold_grid = [0.35, 0.45, 0.55]
+    n_comps_grid = [2, 3, 4, 5, 6]
+    gamma_grid = [0.5, 1.0, 1.5]
+    n_clusters_grid = [3, 4, 5]
 
     # outer cv starts here: evaluation using tuned params
     # gives train/val indices to split data in a stratified way (preserves the percentage of samples for each of diabetes/no diabetes)
@@ -141,6 +123,23 @@ def cv_tune_pipeline_nn(experiment_type = "baseline", n_splits = 5, inner_splits
         y_train_f = y.iloc[train_idx]
         X_val_f = X.iloc[val_idx]
         y_val_f = y.iloc[val_idx]
+        # compute natural kappas for upsampling
+        nat_kap_1, nat_kap_4, nat_kap_6 = get_natural_kappas(X_train_f)
+        kappa_1_grid = [nat_kap_1, nat_kap_1 * 1.5]
+        kappa_4_grid = [nat_kap_4, nat_kap_4 * 1.5]
+        kappa_6_grid =  [nat_kap_6, nat_kap_6 * 1.5]
+
+         # define parameter grids
+        if experiment_type == "baseline":
+            param_grid = list(product(lr_grid, hidden_width_grid, weight_decay_grid, dropout_grid, batch_size_grid, activation_grid, num_epochs_grid, threshold_grid))
+        elif experiment_type == "upsample":
+            param_grid = list(product(lr_grid, hidden_width_grid, weight_decay_grid, dropout_grid, batch_size_grid, activation_grid, num_epochs_grid, threshold_grid, kappa_1_grid, kappa_4_grid, kappa_6_grid))
+        elif experiment_type == "cluster":
+            param_grid = list(product(lr_grid, hidden_width_grid, weight_decay_grid, dropout_grid, batch_size_grid, activation_grid, num_epochs_grid, gamma_grid, n_clusters_grid, threshold_grid))
+        elif experiment_type == "cost_sensitive":
+            param_grid = list(product(lr_grid, hidden_width_grid, weight_decay_grid, dropout_grid, batch_size_grid, activation_grid, num_epochs_grid, threshold_grid))
+        elif experiment_type == "gmm":
+            param_grid = list(product(lr_grid, hidden_width_grid, weight_decay_grid, dropout_grid, batch_size_grid, activation_grid, num_epochs_grid, threshold_grid, n_comps_grid))
 
         skf_inner = StratifiedKFold(n_splits=inner_splits, shuffle=True, random_state=random_state)
         score_star = -np.inf
@@ -149,7 +148,7 @@ def cv_tune_pipeline_nn(experiment_type = "baseline", n_splits = 5, inner_splits
         #print(f"param_grid is {param_grid}")
         # loop through all possible hyperparam combinations, do inner 3-fold cv on them
         for params in param_grid:
-            print(f"param is {params}")
+            #print(f"param is {params}")
             scores_inner = []
             for (train_idx_inner, val_idx_inner) in skf_inner.split(X_train_f, y_train_f):
                 X_train_f_inner = X_train_f.iloc[train_idx_inner]
@@ -253,7 +252,7 @@ def cv_tune_pipeline_nn(experiment_type = "baseline", n_splits = 5, inner_splits
                 score_star = mean_inner
                 params_star = params
 
-        print(f"params_star = {params_star}")
+        #print(f"params_star = {params_star}")
         # now that we have the best parameters, refit the model on outer train fold with those params
         # experiment-specific params
         if experiment_type == "baseline":

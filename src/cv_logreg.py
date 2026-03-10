@@ -74,29 +74,11 @@ def cv_tune_pipeline_logreg(experiment_type = "baseline", n_splits = 5, inner_sp
     y = df["diabetes"].astype(int)
     X = df.drop(columns=["diabetes"])
 
-    # compute natural kappas for upsampling
-    nat_kap_1, nat_kap_4, nat_kap_6 = get_natural_kappas(X)
-
-    lambda_grid = [0, 0.01, 0.1, 1, 10]
-    threshold_grid = [0.3, 0.4, 0.5]
-    gamma_grid = [0.25, 0.5, 1, 2]
+    lambda_grid = [1e-4, 1e-3, 1e-2, 1e-1, 0, 1]
+    threshold_grid = [0.25, 0.35, 0.45, 0.55]
+    gamma_grid = [0.5, 1, 1.5]
     n_clusters_grid = [3, 4, 5, 6]
-    n_comps_grid = [3, 4, 5, 6]
-    kappa_1_grid = [nat_kap_1, nat_kap_1 * 0.5, nat_kap_1 * 1.5]
-    kappa_4_grid = [nat_kap_4, nat_kap_4 * 0.5, nat_kap_4 * 1.5]
-    kappa_6_grid =  [nat_kap_6, nat_kap_6 * 0.5, nat_kap_6 * 1.5]
-
-    # define parameter grids
-    if experiment_type == "baseline":
-        param_grid = list(product(lambda_grid, threshold_grid))
-    elif experiment_type == "upsample":
-        param_grid = list(product(lambda_grid, threshold_grid, kappa_1_grid, kappa_4_grid, kappa_6_grid))
-    elif experiment_type == "cluster":
-        param_grid = list(product(gamma_grid, n_clusters_grid, lambda_grid, threshold_grid))
-    elif experiment_type == "cost_sensitive":
-        param_grid = list(product(lambda_grid, threshold_grid))
-    elif experiment_type == "gmm":
-        param_grid = list(product(lambda_grid, threshold_grid, n_comps_grid))
+    n_comps_grid = [2, 3, 4, 5, 6]
 
     # outer cv starts here: evaluation using tuned params
     # gives train/val indices to split data in a stratified way (preserves the percentage of samples for each of diabetes/no diabetes)
@@ -109,6 +91,24 @@ def cv_tune_pipeline_logreg(experiment_type = "baseline", n_splits = 5, inner_sp
         y_train_f = y.iloc[train_idx]
         X_val_f = X.iloc[val_idx]
         y_val_f = y.iloc[val_idx]
+
+        # compute natural kappas for upsampling
+        nat_kap_1, nat_kap_4, nat_kap_6 = get_natural_kappas(X_train_f)
+        kappa_1_grid = [nat_kap_1, nat_kap_1 * 1.5]
+        kappa_4_grid = [nat_kap_4, nat_kap_4 * 1.5]
+        kappa_6_grid =  [nat_kap_6, nat_kap_6 * 1.5]
+
+        # define parameter grids
+        if experiment_type == "baseline":
+            param_grid = list(product(lambda_grid, threshold_grid))
+        elif experiment_type == "upsample":
+            param_grid = list(product(lambda_grid, threshold_grid, kappa_1_grid, kappa_4_grid, kappa_6_grid))
+        elif experiment_type == "cluster":
+            param_grid = list(product(gamma_grid, n_clusters_grid, lambda_grid, threshold_grid))
+        elif experiment_type == "cost_sensitive":
+            param_grid = list(product(lambda_grid, threshold_grid))
+        elif experiment_type == "gmm":
+            param_grid = list(product(lambda_grid, threshold_grid, n_comps_grid))
 
         skf_inner = StratifiedKFold(n_splits=inner_splits, shuffle=True, random_state=random_state)
         score_star = -np.inf
@@ -321,6 +321,7 @@ def cv_tune_pipeline_logreg(experiment_type = "baseline", n_splits = 5, inner_sp
 
 def main():
     baseline_metrics_dict = cv_tune_pipeline_logreg()
+    print("baseline finished")
     baseline_metrics_dict["fold_metrics"] = baseline_metrics_dict["fold_metrics"].to_dict(orient="records")
 
     baseline_save_path = 'src/metrics/baseline_log_reg_parameters.json'
@@ -330,6 +331,7 @@ def main():
     print(f"JSON file '{baseline_save_path}' created successfully")
 
     upsample_metrics_dict = cv_tune_pipeline_logreg(experiment_type="upsample")
+    print("upsample finished")
     upsample_metrics_dict["fold_metrics"] = upsample_metrics_dict["fold_metrics"].to_dict(orient="records")
 
     upsample_save_path = 'src/metrics/upsample_log_reg_parameters.json'
@@ -339,6 +341,7 @@ def main():
     print(f"JSON file '{upsample_save_path}' created successfully")
 
     cluster_metrics_dict = cv_tune_pipeline_logreg(experiment_type="cluster")
+    print("cluster finished")
     cluster_metrics_dict["fold_metrics"] = cluster_metrics_dict["fold_metrics"].to_dict(orient="records")
 
     cluster_save_path = 'src/metrics/cluster_log_reg_parameters.json'
@@ -348,6 +351,7 @@ def main():
     print(f"JSON file '{cluster_save_path}' created successfully")
 
     cost_metrics_dict = cv_tune_pipeline_logreg(experiment_type="cost_sensitive")
+    print("cost finished")
     cost_metrics_dict["fold_metrics"] = cost_metrics_dict["fold_metrics"].to_dict(orient="records")
 
     cost_save_path = 'src/metrics/cost_log_reg_parameters.json'
@@ -357,6 +361,7 @@ def main():
     print(f"JSON file '{cost_save_path}' created successfully")
 
     gmm_metrics_dict = cv_tune_pipeline_logreg(experiment_type="gmm")
+    print("gmm finished")
     gmm_metrics_dict["fold_metrics"] = gmm_metrics_dict["fold_metrics"].to_dict(orient="records")
 
     gmm_save_path = 'src/metrics/gmm_log_reg_parameters.json'
