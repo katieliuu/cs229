@@ -5,7 +5,7 @@ from sklearn.metrics import accuracy_score, classification_report, confusion_mat
 
 
 def decision_tree(X_train, y_train, max_depth=None, min_samples_split=2, min_samples_leaf=1, sample_weight=None):
-    model = DecisionTreeClassifier(random_state=42, max_depth=max_depth, min_samples_split=min_samples_split, min_samples_leaf=min_samples_leaf)
+    model = DecisionTreeClassifier(random_state=3, max_depth=max_depth, min_samples_split=min_samples_split, min_samples_leaf=min_samples_leaf)
     #train model
     model.fit(X_train, y_train, sample_weight=sample_weight)
     train_accuracy = model.score(X_train, y_train)
