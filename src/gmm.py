@@ -13,7 +13,7 @@ def gmm_cluster_upsample(training_data, max_iter=150, n_components=3):
     model = GaussianMixture(
         n_components=n_components,
         max_iter=max_iter,
-        random_state=42
+        random_state=3
     )
     model.fit(data_matrix)
 

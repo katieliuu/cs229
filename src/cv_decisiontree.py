@@ -8,7 +8,7 @@ from sklearn.tree import DecisionTreeClassifier
 from upsample import naive_upsample, get_natural_kappas
 from logreg.util import calculate_sample_weight
 from kprototypes import run_k_prototypes
-#from gmm import # fill later w any preprocessing/experiment specific functions
+from gmm import gmm_cluster_upsample
 from itertools import product
 import json
 
@@ -76,9 +76,10 @@ def cv_tune_pipeline_dt(experiment_type = "baseline", n_splits = 5, inner_splits
     threshold_grid = [0.4]
     gamma_grid = [0.5]
     n_clusters_grid = [3]
-    kappa_1_grid = [nat_kap_1] #, nat_kap_1 * 1.5]
-    kappa_4_grid = [nat_kap_4] #, nat_kap_4 * 1.5]
-    kappa_6_grid =  [nat_kap_6] #, nat_kap_6 * 1.5]
+    n_comps_grid = [3, 4, 5, 6]
+    kappa_1_grid = [nat_kap_1, nat_kap_1 * 0.5, nat_kap_1 * 1.5]
+    kappa_4_grid = [nat_kap_4, nat_kap_4 * 0.5, nat_kap_4 * 1.5]
+    kappa_6_grid =  [nat_kap_6, nat_kap_6 * 0.5, nat_kap_6 * 1.5]
 
     # INSERT GMM PARAM GRIDS
     if experiment_type == "baseline":
@@ -89,6 +90,8 @@ def cv_tune_pipeline_dt(experiment_type = "baseline", n_splits = 5, inner_splits
         param_grid = list(product(max_depth_grid, min_samples_split_grid, min_samples_leaf_grid, gamma_grid, n_clusters_grid, threshold_grid))
     elif experiment_type == "cost_sensitive":
         param_grid = list(product(max_depth_grid, min_samples_split_grid, min_samples_leaf_grid, threshold_grid))
+    elif experiment_type == "gmm":
+        param_grid = list(product(max_depth_grid, min_samples_split_grid, min_samples_leaf_grid, threshold_grid, n_comps_grid))
 
     # outer cv starts here: evaluation using tuned params
     # gives train/val indices to split data in a stratified way (preserves the percentage of samples for each of diabetes/no diabetes)
@@ -117,7 +120,7 @@ def cv_tune_pipeline_dt(experiment_type = "baseline", n_splits = 5, inner_splits
                 X_val_f_inner = X_train_f.iloc[val_idx_inner]
                 y_val_f_inner = y_train_f.iloc[val_idx_inner]
 
-                # experiment-specific params: ADD GMM and CLUSTERING params
+                # experiment-specific params
                 if experiment_type == "baseline":
                     max_depth, min_samples_split, min_samples_leaf, threshold = params
                     gamma = None
@@ -126,19 +129,31 @@ def cv_tune_pipeline_dt(experiment_type = "baseline", n_splits = 5, inner_splits
                     kappa_4 = None
                     kappa_6 = None
                     sample_weight = None
+                    n_comps = None
                 elif experiment_type == "upsample":
                     max_depth, min_samples_split, min_samples_leaf, threshold, kappa_1, kappa_4, kappa_6 = params
                     gamma = None
                     n_clusters = None
                     sample_weight = None
+                    n_comps = None
                 elif experiment_type == "cluster":
                     max_depth, min_samples_split, min_samples_leaf, gamma, n_clusters, threshold = params
                     kappa_1 = None
                     kappa_4 = None
                     kappa_6 = None
                     sample_weight = None
+                    n_comps = None
                 elif experiment_type == "cost_sensitive":
                     max_depth, min_samples_split, min_samples_leaf, threshold = params
+                    gamma = None
+                    n_clusters = None
+                    kappa_1 = None
+                    kappa_4 = None
+                    kappa_6 = None
+                    sample_weight = None
+                    n_comps = None
+                elif experiment_type == "gmm":
+                    max_depth, min_samples_split, min_samples_leaf, threshold, n_comps = params
                     gamma = None
                     n_clusters = None
                     kappa_1 = None
@@ -168,9 +183,15 @@ def cv_tune_pipeline_dt(experiment_type = "baseline", n_splits = 5, inner_splits
                     sample_weight = calculate_sample_weight(train_set_inner)
                     y_train_f_inner = train_set_inner["diabetes"]
                     X_train_inner_preprocessed = train_set_inner.drop(columns=["diabetes"])
+                
+                elif experiment_type == "gmm":
+                    train_set_inner = pd.concat([X_train_inner_preprocessed, y_train_f_inner.rename("diabetes")], axis=1)
+                    train_set_inner = gmm_cluster_upsample(train_set_inner, n_components=n_comps)
+                    y_train_f_inner = train_set_inner["diabetes"]
+                    X_train_inner_preprocessed = train_set_inner.drop(columns=["diabetes"])
 
                 # inner model fit ADD GMM
-                if experiment_type in ["baseline", "upsample", "cluster"]:
+                if experiment_type in ["baseline", "upsample", "cluster", "gmm"]:
                     tree = DecisionTreeClassifier(max_depth=max_depth, min_samples_split=min_samples_split,
                                                   min_samples_leaf=min_samples_leaf, random_state=random_state)
                     tree.fit(X_train_inner_preprocessed, y_train_f_inner)
@@ -202,19 +223,31 @@ def cv_tune_pipeline_dt(experiment_type = "baseline", n_splits = 5, inner_splits
             kappa_4 = None
             kappa_6 = None
             sample_weight = None
+            n_comps = None
         elif experiment_type == "upsample":
             max_depth, min_samples_split, min_samples_leaf, threshold, kappa_1, kappa_4, kappa_6 = params_star
             gamma = None
             n_clusters = None
             sample_weight = None
+            n_comps = None
         elif experiment_type == "cluster":
             max_depth, min_samples_split, min_samples_leaf, gamma, n_clusters, threshold = params_star
             kappa_1 = None
             kappa_4 = None
             kappa_6 = None
             sample_weight = None
+            n_comps = None
         elif experiment_type == "cost_sensitive":
             max_depth, min_samples_split, min_samples_leaf, threshold = params_star
+            gamma = None
+            n_clusters = None
+            kappa_1 = None
+            kappa_4 = None
+            kappa_6 = None
+            sample_weight = None
+            n_comps = None
+        elif experiment_type == "gmm":
+            max_depth, min_samples_split, min_samples_leaf, threshold, n_comps = params_star
             gamma = None
             n_clusters = None
             kappa_1 = None
@@ -245,9 +278,14 @@ def cv_tune_pipeline_dt(experiment_type = "baseline", n_splits = 5, inner_splits
             sample_weight = calculate_sample_weight(train_set)
             y_train_f = train_set["diabetes"]
             X_train_preprocessed = train_set.drop(columns=["diabetes"])
+        
+        elif experiment_type == "gmm":
+            train_set = pd.concat([X_train_preprocessed, y_train_f.rename("diabetes")], axis=1)
+            train_set = gmm_cluster_upsample(train_set, n_components=n_comps)
+            y_train_f = train_set["diabetes"]
+            X_train_preprocessed = train_set.drop(columns=["diabetes"])
 
-        # INSERT UPSAMPLING LOGIC FOR GMM
-        if experiment_type in ["baseline", "upsample", "cluster"]:
+        if experiment_type in ["baseline", "upsample", "cluster", "gmm"]:
             tree = DecisionTreeClassifier(max_depth=max_depth, min_samples_split=min_samples_split,
                                         min_samples_leaf=min_samples_leaf, random_state=random_state)
             tree.fit(X_train_preprocessed, y_train_f)
@@ -269,7 +307,11 @@ def cv_tune_pipeline_dt(experiment_type = "baseline", n_splits = 5, inner_splits
                         "min_samples_leaf": min_samples_leaf,
                         "threshold": threshold,
                         "gamma": gamma,
-                        "n_clusters": n_clusters})
+                        "n_clusters": n_clusters,
+                        "n_comps": n_comps,
+                        "kappa_1": kappa_1,
+                        "kappa_4": kappa_4,
+                        "kappa_6": kappa_6})
         #"sample_weight": sample_weight,
         
     fold_metrics = pd.DataFrame(metrics)
@@ -316,6 +358,15 @@ def main():
         json.dump(cost_metrics_dict, file, indent = 4)
 
     print(f"JSON file '{cost_save_path}' created successfully")
+
+    gmm_metrics_dict = cv_tune_pipeline_dt(experiment_type="gmm")
+    gmm_metrics_dict["fold_metrics"] = gmm_metrics_dict["fold_metrics"].to_dict(orient="records")
+
+    gmm_save_path = 'src/metrics/gmm_dt_parameters.json'
+    with open(gmm_save_path, mode = 'w') as file:
+        json.dump(gmm_metrics_dict, file, indent = 4)
+
+    print(f"JSON file '{gmm_save_path}' created successfully")
 
 if __name__ == '__main__':
     main()

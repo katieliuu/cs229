@@ -5,9 +5,9 @@ from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import IterativeImputer
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from upsample import naive_upsample, get_natural_kappas
-#from logreg.util import calculate_sample_weight
+from logreg.util import calculate_sample_weight
 from kprototypes import run_k_prototypes
-#from gmm import # fill later w any preprocessing/experiment specific functions
+from gmm import gmm_cluster_upsample
 from itertools import product
 import json
 from neuralnetwork import nn_train, forward_prop, backward_prop, get_initial_params, one_hot_labels
@@ -62,7 +62,7 @@ def f1_from_probs(y_true, probs, threshold):
         f1 = 2 * precision * recall / (precision + recall)
     return f1
 
-def fit_numpy_mlp(X_train, y_train, X_dev, y_dev, hidden_width, lr, batch_size, activation, dropout, weight_decay, num_epochs):
+def fit_numpy_mlp(X_train, y_train, X_dev, y_dev, hidden_width, lr, batch_size, activation, dropout, weight_decay, num_epochs, sample_weights):
     y_train_oh = one_hot_labels(y_train.to_numpy(), num_classes=2)
     y_dev_oh = one_hot_labels(y_dev.to_numpy(), num_classes=2)
 
@@ -81,7 +81,8 @@ def fit_numpy_mlp(X_train, y_train, X_dev, y_dev, hidden_width, lr, batch_size, 
         num_classes=2,
         activation=activation,
         dropout_rate=dropout,
-        reg=weight_decay
+        reg=weight_decay,
+        sample_weights=sample_weights
     )
     return params
 
@@ -110,21 +111,24 @@ def cv_tune_pipeline_nn(experiment_type = "baseline", n_splits = 5, inner_splits
     activation_grid = ['sigmoid']
     num_epochs_grid = [30]
     threshold_grid = [0.4]
+    n_comps_grid = [3, 4, 5, 6]
     gamma_grid = [0.5]
     n_clusters_grid = [3]
-    kappa_1_grid = [nat_kap_1] #, nat_kap_1 * 1.5]
-    kappa_4_grid = [nat_kap_4] #, nat_kap_4 * 1.5]
-    kappa_6_grid =  [nat_kap_6] #, nat_kap_6 * 1.5]
+    kappa_1_grid = [nat_kap_1, nat_kap_1 * 0.5, nat_kap_1 * 1.5]
+    kappa_4_grid = [nat_kap_4, nat_kap_4 * 0.5, nat_kap_4 * 1.5]
+    kappa_6_grid =  [nat_kap_6, nat_kap_6 * 0.5, nat_kap_6 * 1.5]
 
-    # INSERT GMM PARAM GRIDS
+    # define parameter grids
     if experiment_type == "baseline":
         param_grid = list(product(lr_grid, hidden_width_grid, weight_decay_grid, dropout_grid, batch_size_grid, activation_grid, num_epochs_grid, threshold_grid))
     elif experiment_type == "upsample":
         param_grid = list(product(lr_grid, hidden_width_grid, weight_decay_grid, dropout_grid, batch_size_grid, activation_grid, num_epochs_grid, threshold_grid, kappa_1_grid, kappa_4_grid, kappa_6_grid))
     elif experiment_type == "cluster":
         param_grid = list(product(lr_grid, hidden_width_grid, weight_decay_grid, dropout_grid, batch_size_grid, activation_grid, num_epochs_grid, gamma_grid, n_clusters_grid, threshold_grid))
-    #elif experiment_type == "cost_sensitive":
-        #param_grid = list(product(lr_grid, hidden_width_grid, dropout_grid, batch_size_grid, activation_grid, threshold_grid))
+    elif experiment_type == "cost_sensitive":
+        param_grid = list(product(lr_grid, hidden_width_grid, weight_decay_grid, dropout_grid, batch_size_grid, activation_grid, num_epochs_grid, threshold_grid))
+    elif experiment_type == "gmm":
+        param_grid = list(product(lr_grid, hidden_width_grid, weight_decay_grid, dropout_grid, batch_size_grid, activation_grid, num_epochs_grid, threshold_grid, n_comps_grid))
 
     # outer cv starts here: evaluation using tuned params
     # gives train/val indices to split data in a stratified way (preserves the percentage of samples for each of diabetes/no diabetes)
@@ -153,7 +157,7 @@ def cv_tune_pipeline_nn(experiment_type = "baseline", n_splits = 5, inner_splits
                 X_val_f_inner = X_train_f.iloc[val_idx_inner]
                 y_val_f_inner = y_train_f.iloc[val_idx_inner]
 
-                # experiment-specific params: ADD GMM and CLUSTERING params
+                # experiment-specific params
                 if experiment_type == "baseline":
                     lr, hidden_width, weight_decay, dropout, batch_size, activation, num_epochs, threshold = params
                     gamma = None
@@ -161,26 +165,38 @@ def cv_tune_pipeline_nn(experiment_type = "baseline", n_splits = 5, inner_splits
                     kappa_1 = None
                     kappa_4 = None
                     kappa_6 = None
-                    #sample_weight = None
+                    sample_weight = None
+                    n_comps = None
                 elif experiment_type == "upsample":
                     lr, hidden_width, weight_decay, dropout, batch_size, activation, num_epochs, threshold, kappa_1, kappa_4, kappa_6 = params
                     gamma = None
                     n_clusters = None
-                    #sample_weight = None
+                    sample_weight = None
+                    n_comps = None
                 elif experiment_type == "cluster":
                     lr, hidden_width, weight_decay, dropout, batch_size, activation, num_epochs, gamma, n_clusters, threshold = params
                     kappa_1 = None
                     kappa_4 = None
                     kappa_6 = None
-                    #sample_weight = None
-                #elif experiment_type == "cost_sensitive":
-                    #lr, hidden_width, dropout, batch_size, activation, threshold = params
-                    #gamma = None
-                    #n_clusters = None
-                    #kappa_1 = None
-                    #kappa_4 = None
-                    #kappa_6 = None
-                    #sample_weight = None
+                    sample_weight = None
+                    n_comps = None
+                elif experiment_type == "cost_sensitive":
+                    lr, hidden_width, weight_decay, dropout, batch_size, activation, num_epochs, threshold = params
+                    gamma = None
+                    n_clusters = None
+                    kappa_1 = None
+                    kappa_4 = None
+                    kappa_6 = None
+                    sample_weight = None
+                    n_comps = None
+                elif experiment_type == "gmm":
+                    lr, hidden_width, weight_decay, dropout, batch_size, activation, num_epochs, threshold, n_comps = params
+                    gamma = None
+                    n_clusters = None
+                    kappa_1 = None
+                    kappa_4 = None
+                    kappa_6 = None
+                    sample_weight = None
 
                 X_train_inner_preprocessed, mice, scaler, encoder = preprocess_fit_transform(X_train_f_inner)
                 X_val_inner_preprocessed = preprocess_transform(X_val_f_inner, mice, scaler, encoder)
@@ -199,11 +215,17 @@ def cv_tune_pipeline_nn(experiment_type = "baseline", n_splits = 5, inner_splits
                     y_train_f_inner = train_set_inner["diabetes"]
                     X_train_inner_preprocessed = train_set_inner.drop(columns=["diabetes"])
 
-                # elif experiment_type == "cost_sensitive":
-                #     train_set_inner = pd.concat([X_train_inner_preprocessed, y_train_f_inner.rename("diabetes")], axis=1)
-                #     sample_weight = calculate_sample_weight(train_set_inner)
-                #     y_train_f_inner = train_set_inner["diabetes"]
-                #     X_train_inner_preprocessed = train_set_inner.drop(columns=["diabetes"])
+                elif experiment_type == "cost_sensitive":
+                    train_set_inner = pd.concat([X_train_inner_preprocessed, y_train_f_inner.rename("diabetes")], axis=1)
+                    sample_weight = calculate_sample_weight(train_set_inner)
+                    y_train_f_inner = train_set_inner["diabetes"]
+                    X_train_inner_preprocessed = train_set_inner.drop(columns=["diabetes"])
+                
+                elif experiment_type == "gmm":
+                    train_set_inner = pd.concat([X_train_inner_preprocessed, y_train_f_inner.rename("diabetes")], axis=1)
+                    train_set_inner = gmm_cluster_upsample(train_set_inner, n_components=n_comps)
+                    y_train_f_inner = train_set_inner["diabetes"]
+                    X_train_inner_preprocessed = train_set_inner.drop(columns=["diabetes"])
 
                 params_nn = fit_numpy_mlp(
                     X_train=X_train_inner_preprocessed,
@@ -216,14 +238,15 @@ def cv_tune_pipeline_nn(experiment_type = "baseline", n_splits = 5, inner_splits
                     activation=activation,
                     dropout=dropout,
                     weight_decay=weight_decay,
-                    num_epochs=num_epochs
+                    num_epochs=num_epochs,
+                    sample_weights=sample_weight
                 )
                 
                 probs = predict_probs_numpy_mlp(
                     X_val_inner_preprocessed, params_nn, activation=activation)
                 
                 scores_inner.append(f1_from_probs(y_val_f_inner, probs, threshold))
-                # inner model fit ADD GMM
+                # inner model fit
             # running update of optimal parameters
             mean_inner = float(np.mean(scores_inner))
             if mean_inner > score_star:
@@ -232,7 +255,7 @@ def cv_tune_pipeline_nn(experiment_type = "baseline", n_splits = 5, inner_splits
 
         print(f"params_star = {params_star}")
         # now that we have the best parameters, refit the model on outer train fold with those params
-        # experiment-specific params: ADD GMM params
+        # experiment-specific params
         if experiment_type == "baseline":
             lr, hidden_width, weight_decay, dropout, batch_size, activation, num_epochs, threshold = params_star
             gamma = None
@@ -240,27 +263,39 @@ def cv_tune_pipeline_nn(experiment_type = "baseline", n_splits = 5, inner_splits
             kappa_1 = None
             kappa_4 = None
             kappa_6 = None
-            #sample_weight = None
+            sample_weight = None
+            n_comps = None
         elif experiment_type == "upsample":
             lr, hidden_width, weight_decay, dropout, batch_size, activation, num_epochs, threshold, kappa_1, kappa_4, kappa_6 = params_star
             gamma = None
             n_clusters = None
-            #sample_weight = None
+            sample_weight = None
+            n_comps = None
         elif experiment_type == "cluster":
             lr, hidden_width, weight_decay, dropout, batch_size, activation, num_epochs, gamma, n_clusters, threshold = params_star
             kappa_1 = None
             kappa_4 = None
             kappa_6 = None
-            #sample_weight = None
-        # elif experiment_type == "cost_sensitive":
-        #     learning_rate, n_layers, threshold = params_star
-        #     gamma = None
-        #     n_clusters = None
-        #     kappa_1 = None
-        #     kappa_4 = None
-        #     kappa_6 = None
-        #     #sample_weight = None
-
+            sample_weight = None
+            n_comps = None
+        elif experiment_type == "cost_sensitive":
+            lr, hidden_width, weight_decay, dropout, batch_size, activation, num_epochs, threshold = params_star
+            gamma = None
+            n_clusters = None
+            kappa_1 = None
+            kappa_4 = None
+            kappa_6 = None
+            sample_weight = None
+            n_comps = None
+        elif experiment_type == "gmm":
+            lr, hidden_width, weight_decay, dropout, batch_size, activation, num_epochs, threshold, n_comps = params_star
+            gamma = None
+            n_clusters = None
+            kappa_1 = None
+            kappa_4 = None
+            kappa_6 = None
+            sample_weight = None
+        
         # fit imputer, scaler, encoder to train folds
         X_train_preprocessed, mice, scaler, encoder = preprocess_fit_transform(X_train_f)
         # apply to validation fold
@@ -279,12 +314,17 @@ def cv_tune_pipeline_nn(experiment_type = "baseline", n_splits = 5, inner_splits
             y_train_f = train_set["diabetes"]
             X_train_preprocessed = train_set.drop(columns=["diabetes"])
 
-        # elif experiment_type == "cost_sensitive":
-        #     train_set = pd.concat([X_train_preprocessed, y_train_f.rename("diabetes")], axis=1)
-        #     sample_weight = calculate_sample_weight(train_set)
-        #     y_train_f = train_set["diabetes"]
-        #     X_train_preprocessed = train_set.drop(columns=["diabetes"])
-
+        elif experiment_type == "cost_sensitive":
+            train_set = pd.concat([X_train_preprocessed, y_train_f.rename("diabetes")], axis=1)
+            sample_weight = calculate_sample_weight(train_set)
+            y_train_f = train_set["diabetes"]
+            X_train_preprocessed = train_set.drop(columns=["diabetes"])
+        
+        elif experiment_type == "gmm":
+            train_set = pd.concat([X_train_preprocessed, y_train_f.rename("diabetes")], axis=1)
+            train_set = gmm_cluster_upsample(train_set, n_components=n_comps)
+            y_train_f = train_set["diabetes"]
+            X_train_preprocessed = train_set.drop(columns=["diabetes"])
 
         params_nn = fit_numpy_mlp(
                     X_train=X_train_preprocessed,
@@ -297,7 +337,8 @@ def cv_tune_pipeline_nn(experiment_type = "baseline", n_splits = 5, inner_splits
                     activation=activation,
                     dropout=dropout,
                     weight_decay=weight_decay,
-                    num_epochs=num_epochs
+                    num_epochs=num_epochs,
+                    sample_weights=sample_weight
                 )
         
         probs = predict_probs_numpy_mlp(X_val_preprocessed, params_nn, activation=activation)
@@ -315,7 +356,11 @@ def cv_tune_pipeline_nn(experiment_type = "baseline", n_splits = 5, inner_splits
                         "num_epochs": num_epochs,
                         "threshold": threshold,
                         "gamma": gamma,
-                        "n_clusters": n_clusters})
+                        "n_clusters": n_clusters,
+                        "n_comps": n_comps,
+                        "kappa_1": kappa_1,
+                        "kappa_4": kappa_4,
+                        "kappa_6": kappa_6})
         #"sample_weight": sample_weight,
         
     fold_metrics = pd.DataFrame(metrics)
@@ -354,14 +399,23 @@ def main():
 
     print(f"JSON file '{cluster_save_path}' created successfully")
 
-    # cost_metrics_dict = cv_tune_pipeline_nn(experiment_type="cost_sensitive")
-    # cost_metrics_dict["fold_metrics"] = cost_metrics_dict["fold_metrics"].to_dict(orient="records")
+    cost_metrics_dict = cv_tune_pipeline_nn(experiment_type="cost_sensitive")
+    cost_metrics_dict["fold_metrics"] = cost_metrics_dict["fold_metrics"].to_dict(orient="records")
 
-    # cost_save_path = 'src/metrics/cost_nn_parameters.json'
-    # with open(cost_save_path, mode = 'w') as file:
-    #     json.dump(cost_metrics_dict, file, indent = 4)
+    cost_save_path = 'src/metrics/cost_nn_parameters.json'
+    with open(cost_save_path, mode = 'w') as file:
+        json.dump(cost_metrics_dict, file, indent = 4)
 
-    # print(f"JSON file '{cost_save_path}' created successfully")
+    print(f"JSON file '{cost_save_path}' created successfully")
+
+    gmm_metrics_dict = cv_tune_pipeline_nn(experiment_type="gmm")
+    gmm_metrics_dict["fold_metrics"] = gmm_metrics_dict["fold_metrics"].to_dict(orient="records")
+
+    gmm_save_path = 'src/metrics/gmm_nn_parameters.json'
+    with open(gmm_save_path, mode = 'w') as file:
+        json.dump(gmm_metrics_dict, file, indent = 4)
+
+    print(f"JSON file '{gmm_save_path}' created successfully")
 
 if __name__ == '__main__':
     main()

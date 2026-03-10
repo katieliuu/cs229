@@ -155,9 +155,6 @@ def forward_prop(data, one_hot_labels, params, is_training=False, activation='si
     
     # Added 1e-8 for log stability to prevent NaN errors during training
     cost = -np.sum(one_hot_labels * np.log(h_theta + 1e-8)) / data.shape[0] 
-
-    h_theta_bar = np.dot(a, params["W2"]) + params["b2"]
-    h_theta = softmax(h_theta_bar)
     
     # Apply weights to cost if they exist
     if sample_weights is not None:

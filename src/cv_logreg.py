@@ -15,7 +15,7 @@ from logreg.logreg_src import logistic_regression
 from upsample import naive_upsample, get_natural_kappas
 from logreg.util import calculate_sample_weight
 from kprototypes import run_k_prototypes
-#from gmm import # fill later w any preprocessing/experiment specific functions
+from gmm import gmm_cluster_upsample
 from itertools import product
 import json
 
@@ -81,11 +81,12 @@ def cv_tune_pipeline_logreg(experiment_type = "baseline", n_splits = 5, inner_sp
     threshold_grid = [0.3, 0.4, 0.5]
     gamma_grid = [0.25, 0.5, 1, 2]
     n_clusters_grid = [3, 4, 5, 6]
+    n_comps_grid = [3, 4, 5, 6]
     kappa_1_grid = [nat_kap_1, nat_kap_1 * 0.5, nat_kap_1 * 1.5]
     kappa_4_grid = [nat_kap_4, nat_kap_4 * 0.5, nat_kap_4 * 1.5]
     kappa_6_grid =  [nat_kap_6, nat_kap_6 * 0.5, nat_kap_6 * 1.5]
 
-    # INSERT GMM AND CLUSTERING PARAM GRIDS
+    # define parameter grids
     if experiment_type == "baseline":
         param_grid = list(product(lambda_grid, threshold_grid))
     elif experiment_type == "upsample":
@@ -94,6 +95,8 @@ def cv_tune_pipeline_logreg(experiment_type = "baseline", n_splits = 5, inner_sp
         param_grid = list(product(gamma_grid, n_clusters_grid, lambda_grid, threshold_grid))
     elif experiment_type == "cost_sensitive":
         param_grid = list(product(lambda_grid, threshold_grid))
+    elif experiment_type == "gmm":
+        param_grid = list(product(lambda_grid, threshold_grid, n_comps_grid))
 
     # outer cv starts here: evaluation using tuned params
     # gives train/val indices to split data in a stratified way (preserves the percentage of samples for each of diabetes/no diabetes)
@@ -122,7 +125,7 @@ def cv_tune_pipeline_logreg(experiment_type = "baseline", n_splits = 5, inner_sp
                 X_val_f_inner = X_train_f.iloc[val_idx_inner]
                 y_val_f_inner = y_train_f.iloc[val_idx_inner]
 
-                # experiment-specific params: ADD GMM and CLUSTERING params
+                # experiment-specific params
                 if experiment_type == "baseline":
                     lambda_reg, threshold = params
                     gamma = None
@@ -131,19 +134,31 @@ def cv_tune_pipeline_logreg(experiment_type = "baseline", n_splits = 5, inner_sp
                     kappa_4 = None
                     kappa_6 = None
                     sample_weight = None
+                    n_comps = None
                 elif experiment_type == "upsample":
                     lambda_reg, threshold, kappa_1, kappa_4, kappa_6 = params
                     gamma = None
                     n_clusters = None
                     sample_weight = None
+                    n_comps = None
                 elif experiment_type == "cluster":
                     gamma, n_clusters, lambda_reg, threshold = params
                     kappa_1 = None
                     kappa_4 = None
                     kappa_6 = None
                     sample_weight = None
+                    n_comps = None
                 elif experiment_type == "cost_sensitive":
                     lambda_reg, threshold = params
+                    gamma = None
+                    n_clusters = None
+                    kappa_1 = None
+                    kappa_4 = None
+                    kappa_6 = None
+                    sample_weight = None
+                    n_comps = None
+                elif experiment_type == "gmm":
+                    lambda_reg, threshold, n_comps = params
                     gamma = None
                     n_clusters = None
                     kappa_1 = None
@@ -173,9 +188,15 @@ def cv_tune_pipeline_logreg(experiment_type = "baseline", n_splits = 5, inner_sp
                     sample_weight = calculate_sample_weight(train_set_inner)
                     y_train_f_inner = train_set_inner["diabetes"]
                     X_train_inner_preprocessed = train_set_inner.drop(columns=["diabetes"])
+                
+                elif experiment_type == "gmm":
+                    train_set_inner = pd.concat([X_train_inner_preprocessed, y_train_f_inner.rename("diabetes")], axis=1)
+                    train_set_inner = gmm_cluster_upsample(train_set_inner, n_components=n_comps)
+                    y_train_f_inner = train_set_inner["diabetes"]
+                    X_train_inner_preprocessed = train_set_inner.drop(columns=["diabetes"])
 
-                # inner model fit ADD GMM
-                if experiment_type in ["baseline", "upsample", "cluster"]:
+                # inner model fit
+                if experiment_type in ["baseline", "upsample", "cluster", "gmm"]:
                     theta = logistic_regression(X_train_inner_preprocessed.to_numpy(), y_train_f_inner.to_numpy(),
                                                 lambda_reg = lambda_reg)
                 # change to account for penalty weight calculations
@@ -195,7 +216,7 @@ def cv_tune_pipeline_logreg(experiment_type = "baseline", n_splits = 5, inner_sp
 
         #print(f"params_star = {params_star}")
         # now that we have the best parameters, refit the model on outer train fold with those params
-        # experiment-specific params: ADD GMM params
+        # experiment-specific params:
         if experiment_type == "baseline":
             lambda_reg, threshold = params_star
             gamma = None
@@ -204,19 +225,31 @@ def cv_tune_pipeline_logreg(experiment_type = "baseline", n_splits = 5, inner_sp
             kappa_4 = None
             kappa_6 = None
             sample_weight = None
+            n_comps = None
         elif experiment_type == "upsample":
             lambda_reg, threshold, kappa_1, kappa_4, kappa_6 = params_star
             gamma = None
             n_clusters = None
             sample_weight = None
+            n_comps = None
         elif experiment_type == "cluster":
             gamma, n_clusters, lambda_reg, threshold = params_star
             kappa_1 = None
             kappa_4 = None
             kappa_6 = None
             sample_weight = None
+            n_comps = None
         elif experiment_type == "cost_sensitive":
             lambda_reg, threshold = params_star
+            gamma = None
+            n_clusters = None
+            kappa_1 = None
+            kappa_4 = None
+            kappa_6 = None
+            sample_weight = None
+            n_comps = None
+        elif experiment_type == "gmm":
+            lambda_reg, threshold, n_comps = params_star
             gamma = None
             n_clusters = None
             kappa_1 = None
@@ -248,8 +281,13 @@ def cv_tune_pipeline_logreg(experiment_type = "baseline", n_splits = 5, inner_sp
             y_train_f = train_set["diabetes"]
             X_train_preprocessed = train_set.drop(columns=["diabetes"])
 
-        # INSERT UPSAMPLING LOGIC FOR GMM
-        if experiment_type in ["baseline", "upsample", "cluster"]:
+        elif experiment_type == "gmm":
+            train_set = pd.concat([X_train_preprocessed, y_train_f.rename("diabetes")], axis=1)
+            train_set = gmm_cluster_upsample(train_set, n_components=n_comps)
+            y_train_f = train_set["diabetes"]
+            X_train_preprocessed = train_set.drop(columns=["diabetes"])
+
+        if experiment_type in ["baseline", "upsample", "cluster", "gmm"]:
             theta = logistic_regression(X_train_preprocessed.to_numpy(), y_train_f.to_numpy(), lambda_reg=lambda_reg)
 
         elif experiment_type == "cost_sensitive":
@@ -266,7 +304,11 @@ def cv_tune_pipeline_logreg(experiment_type = "baseline", n_splits = 5, inner_sp
                         "lambda_reg": lambda_reg,
                         "threshold": threshold,
                         "gamma": gamma,
-                        "n_clusters": n_clusters})
+                        "n_comps": n_comps,
+                        "n_clusters": n_clusters,
+                        "kappa_1": kappa_1,
+                        "kappa_4": kappa_4,
+                        "kappa_6": kappa_6})
         #"sample_weight": sample_weight,
         
     fold_metrics = pd.DataFrame(metrics)
@@ -313,6 +355,15 @@ def main():
         json.dump(cost_metrics_dict, file, indent = 4)
 
     print(f"JSON file '{cost_save_path}' created successfully")
+
+    gmm_metrics_dict = cv_tune_pipeline_logreg(experiment_type="gmm")
+    gmm_metrics_dict["fold_metrics"] = gmm_metrics_dict["fold_metrics"].to_dict(orient="records")
+
+    gmm_save_path = 'src/metrics/gmm_log_reg_parameters.json'
+    with open(gmm_save_path, mode = 'w') as file:
+        json.dump(gmm_metrics_dict, file, indent = 4)
+
+    print(f"JSON file '{gmm_save_path}' created successfully")
 
 if __name__ == '__main__':
     main()
