@@ -135,8 +135,7 @@ def get_initial_params(input_size, num_hidden, num_output):
 #     return (a, h_theta, cost)
 #     # *** END CODE HERE ***
 
-def forward_prop(data, one_hot_labels, params, is_training=False, activation='sigmoid', dropout_rate=0.0):
-    # Apply chosen activation function
+def forward_prop(data, one_hot_labels, params, is_training=False, activation='sigmoid', dropout_rate=0.0, sample_weights=None): # <-- added sample_weights    # Apply chosen activation function
     if activation == 'sigmoid':
         a = sigmoid(np.dot(data, params["W1"]) + params["b1"])
     elif activation == 'relu':
@@ -156,6 +155,16 @@ def forward_prop(data, one_hot_labels, params, is_training=False, activation='si
     
     # Added 1e-8 for log stability to prevent NaN errors during training
     cost = -np.sum(one_hot_labels * np.log(h_theta + 1e-8)) / data.shape[0] 
+
+    h_theta_bar = np.dot(a, params["W2"]) + params["b2"]
+    h_theta = softmax(h_theta_bar)
+    
+    # Apply weights to cost if they exist
+    if sample_weights is not None:
+        weights = sample_weights.reshape(-1, 1)
+        cost = -np.sum(weights * one_hot_labels * np.log(h_theta + 1e-8)) / data.shape[0]
+    else:
+        cost = -np.sum(one_hot_labels * np.log(h_theta + 1e-8)) / data.shape[0] 
 
     return (a, h_theta, cost)
 
@@ -222,11 +231,17 @@ def forward_prop(data, one_hot_labels, params, is_training=False, activation='si
 #     return {"W1": dLdW1, "W2": dLdW2, "b1": dLdb1, "b2": dLdb2}
 #     # *** END CODE HERE ***
 
-def backward_prop(data, one_hot_labels, params, forward_prop_func, activation='sigmoid', dropout_rate=0.0, reg=0.0):
+def backward_prop(data, one_hot_labels, params, forward_prop_func, activation='sigmoid', dropout_rate=0.0, reg=0.0, sample_weights=None): # <-- added sample_weights
     # Force is_training=True so dropout is applied during gradient calculation
-    a, h_theta, cost = forward_prop_func(data, one_hot_labels, params, is_training=True, activation=activation, dropout_rate=dropout_rate)
+    # Pass sample_weights to forward_prop
+    a, h_theta, cost = forward_prop_func(data, one_hot_labels, params, is_training=True, activation=activation, dropout_rate=dropout_rate, sample_weights=sample_weights)
 
     grad_h_theta = (h_theta - one_hot_labels) / data.shape[0]
+    
+    # Scale gradient by sample weights
+    if sample_weights is not None:
+        grad_h_theta *= sample_weights.reshape(-1, 1)
+    
     dLdW2 = np.dot(a.T, grad_h_theta)
     dLdb2 = np.sum(grad_h_theta, axis=0)
     dLdX = np.dot(grad_h_theta, params["W2"].T)
@@ -271,14 +286,17 @@ def backward_prop_regularized(data, one_hot_labels, params, forward_prop_func, r
 
     return grads
 
-def gradient_descent_epoch(train_data, one_hot_train_labels, learning_rate, batch_size, params, forward_prop_func, backward_prop_func, activation='sigmoid', dropout_rate=0.0, reg=0.0):
+def gradient_descent_epoch(train_data, one_hot_train_labels, learning_rate, batch_size, params, forward_prop_func, backward_prop_func, activation='sigmoid', dropout_rate=0.0, reg=0.0, sample_weights=None): # <-- added sample_weights
     for i in range(0, train_data.shape[0], batch_size):
         batch_data = train_data[i : i + batch_size]
         batch_labels = one_hot_train_labels[i : i + batch_size]
-
-        # Pass hyperparams down to backprop
-        grads = backward_prop_func(batch_data, batch_labels, params, forward_prop_func, activation=activation, dropout_rate=dropout_rate, reg=reg)
         
+        # Slice weights for the current batch
+        batch_weights = sample_weights[i : i + batch_size] if sample_weights is not None else None
+
+        # Pass batch_weights down
+        grads = backward_prop_func(batch_data, batch_labels, params, forward_prop_func, activation=activation, dropout_rate=dropout_rate, reg=reg, sample_weights=batch_weights)
+
         params["W1"] -= learning_rate * grads["W1"]
         params["b1"] -= learning_rate * grads["b1"]
         params["W2"] -= learning_rate * grads["W2"]
@@ -289,7 +307,7 @@ def nn_train(
     train_data, train_labels, dev_data, dev_labels, 
     get_initial_params_func, forward_prop_func, backward_prop_func,
     num_hidden=300, learning_rate=5, num_epochs=30, batch_size=1000, num_classes=2,
-    activation='sigmoid', dropout_rate=0.0, reg=0.0): # <-- Added tunable params here
+    activation='sigmoid', dropout_rate=0.0, reg=0.0, sample_weights=None): # <-- added sample_weights
 
     (nexp, dim) = train_data.shape
     params = get_initial_params_func(dim, num_hidden, num_classes) 
@@ -297,10 +315,10 @@ def nn_train(
     cost_train, cost_dev, accuracy_train, accuracy_dev = [], [], [], []
 
     for epoch in range(num_epochs):
-        # Pass hyperparams down to gradient descent
-        gradient_descent_epoch(train_data, train_labels, learning_rate, batch_size, params, forward_prop_func, backward_prop_func, activation=activation, dropout_rate=dropout_rate, reg=reg)
+        # Pass sample_weights to gradient descent
+        gradient_descent_epoch(train_data, train_labels, learning_rate, batch_size, params, forward_prop_func, backward_prop_func, activation=activation, dropout_rate=dropout_rate, reg=reg, sample_weights=sample_weights)
 
-        # Eval on train and dev (is_training defaults to False, so dropout is safely off)
+        # Eval on train and dev (Weights are typically not needed for accuracy/eval metrics unless we specifically want a weighted dev loss)
         h, output, cost = forward_prop_func(train_data, train_labels, params, activation=activation)
         cost_train.append(cost)
         accuracy_train.append(compute_accuracy(output,train_labels))
