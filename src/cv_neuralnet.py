@@ -125,15 +125,13 @@ def cv_tune_pipeline_nn(experiment_type = "baseline", n_splits = 5, inner_splits
         y_val_f = y.iloc[val_idx]
         # compute natural kappas for upsampling
         nat_kap_1, nat_kap_4, nat_kap_6 = get_natural_kappas(X_train_f)
-        kappa_1_grid = [nat_kap_1, nat_kap_1 * 1.5]
-        kappa_4_grid = [nat_kap_4, nat_kap_4 * 1.5]
-        kappa_6_grid =  [nat_kap_6, nat_kap_6 * 1.5]
+        kappa_mult_grid = [1.0, 1.5]
 
          # define parameter grids
         if experiment_type == "baseline":
             param_grid = list(product(lr_grid, hidden_width_grid, weight_decay_grid, dropout_grid, batch_size_grid, activation_grid, num_epochs_grid, threshold_grid))
         elif experiment_type == "upsample":
-            param_grid = list(product(lr_grid, hidden_width_grid, weight_decay_grid, dropout_grid, batch_size_grid, activation_grid, num_epochs_grid, threshold_grid, kappa_1_grid, kappa_4_grid, kappa_6_grid))
+            param_grid = list(product(lr_grid, hidden_width_grid, weight_decay_grid, dropout_grid, batch_size_grid, activation_grid, num_epochs_grid, threshold_grid, kappa_mult_grid, kappa_mult_grid, kappa_mult_grid))
         elif experiment_type == "cluster":
             param_grid = list(product(lr_grid, hidden_width_grid, weight_decay_grid, dropout_grid, batch_size_grid, activation_grid, num_epochs_grid, gamma_grid, n_clusters_grid, threshold_grid))
         elif experiment_type == "cost_sensitive":
@@ -166,8 +164,14 @@ def cv_tune_pipeline_nn(experiment_type = "baseline", n_splits = 5, inner_splits
                     kappa_6 = None
                     sample_weight = None
                     n_comps = None
+                    kappa_mult_1 = None
+                    kappa_mult_4 = None
+                    kappa_mult_6 = None
                 elif experiment_type == "upsample":
-                    lr, hidden_width, weight_decay, dropout, batch_size, activation, num_epochs, threshold, kappa_1, kappa_4, kappa_6 = params
+                    lr, hidden_width, weight_decay, dropout, batch_size, activation, num_epochs, threshold, kappa_mult_1, kappa_mult_4, kappa_mult_6 = params
+                    kappa_1 = nat_kap_1 * kappa_mult_1
+                    kappa_4 = nat_kap_4 * kappa_mult_4
+                    kappa_6 = nat_kap_6 * kappa_mult_6
                     gamma = None
                     n_clusters = None
                     sample_weight = None
@@ -179,6 +183,9 @@ def cv_tune_pipeline_nn(experiment_type = "baseline", n_splits = 5, inner_splits
                     kappa_6 = None
                     sample_weight = None
                     n_comps = None
+                    kappa_mult_1 = None
+                    kappa_mult_4 = None
+                    kappa_mult_6 = None
                 elif experiment_type == "cost_sensitive":
                     lr, hidden_width, weight_decay, dropout, batch_size, activation, num_epochs, threshold = params
                     gamma = None
@@ -188,6 +195,9 @@ def cv_tune_pipeline_nn(experiment_type = "baseline", n_splits = 5, inner_splits
                     kappa_6 = None
                     sample_weight = None
                     n_comps = None
+                    kappa_mult_1 = None
+                    kappa_mult_4 = None
+                    kappa_mult_6 = None
                 elif experiment_type == "gmm":
                     lr, hidden_width, weight_decay, dropout, batch_size, activation, num_epochs, threshold, n_comps = params
                     gamma = None
@@ -196,6 +206,9 @@ def cv_tune_pipeline_nn(experiment_type = "baseline", n_splits = 5, inner_splits
                     kappa_4 = None
                     kappa_6 = None
                     sample_weight = None
+                    kappa_mult_1 = None
+                    kappa_mult_4 = None
+                    kappa_mult_6 = None
 
                 X_train_inner_preprocessed, mice, scaler, encoder = preprocess_fit_transform(X_train_f_inner)
                 X_val_inner_preprocessed = preprocess_transform(X_val_f_inner, mice, scaler, encoder)
@@ -264,8 +277,14 @@ def cv_tune_pipeline_nn(experiment_type = "baseline", n_splits = 5, inner_splits
             kappa_6 = None
             sample_weight = None
             n_comps = None
+            kappa_mult_1 = None
+            kappa_mult_4 = None
+            kappa_mult_6 = None
         elif experiment_type == "upsample":
-            lr, hidden_width, weight_decay, dropout, batch_size, activation, num_epochs, threshold, kappa_1, kappa_4, kappa_6 = params_star
+            lr, hidden_width, weight_decay, dropout, batch_size, activation, num_epochs, threshold, kappa_mult_1, kappa_mult_4, kappa_mult_6 = params_star
+            kappa_1 = nat_kap_1 * kappa_mult_1
+            kappa_4 = nat_kap_4 * kappa_mult_4
+            kappa_6 = nat_kap_6 * kappa_mult_6
             gamma = None
             n_clusters = None
             sample_weight = None
@@ -277,6 +296,9 @@ def cv_tune_pipeline_nn(experiment_type = "baseline", n_splits = 5, inner_splits
             kappa_6 = None
             sample_weight = None
             n_comps = None
+            kappa_mult_1 = None
+            kappa_mult_4 = None
+            kappa_mult_6 = None
         elif experiment_type == "cost_sensitive":
             lr, hidden_width, weight_decay, dropout, batch_size, activation, num_epochs, threshold = params_star
             gamma = None
@@ -286,6 +308,9 @@ def cv_tune_pipeline_nn(experiment_type = "baseline", n_splits = 5, inner_splits
             kappa_6 = None
             sample_weight = None
             n_comps = None
+            kappa_mult_1 = None
+            kappa_mult_4 = None
+            kappa_mult_6 = None
         elif experiment_type == "gmm":
             lr, hidden_width, weight_decay, dropout, batch_size, activation, num_epochs, threshold, n_comps = params_star
             gamma = None
@@ -294,6 +319,9 @@ def cv_tune_pipeline_nn(experiment_type = "baseline", n_splits = 5, inner_splits
             kappa_4 = None
             kappa_6 = None
             sample_weight = None
+            kappa_mult_1 = None
+            kappa_mult_4 = None
+            kappa_mult_6 = None
         
         # fit imputer, scaler, encoder to train folds
         X_train_preprocessed, mice, scaler, encoder = preprocess_fit_transform(X_train_f)
@@ -359,7 +387,13 @@ def cv_tune_pipeline_nn(experiment_type = "baseline", n_splits = 5, inner_splits
                         "n_comps": n_comps,
                         "kappa_1": kappa_1,
                         "kappa_4": kappa_4,
-                        "kappa_6": kappa_6})
+                        "kappa_6": kappa_6,
+                        "kappa_mult_1": kappa_mult_1,
+                        "kappa_mult_4": kappa_mult_4,
+                        "kappa_mult_6": kappa_mult_6,
+                        "natural_kappa_1": nat_kap_1,
+                        "natural_kappa_4": nat_kap_4,
+                        "natural_kappa_6": nat_kap_6})
         #"sample_weight": sample_weight,
         
     fold_metrics = pd.DataFrame(metrics)
