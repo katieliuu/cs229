@@ -67,7 +67,7 @@ def f1_from_probs(y_true, probs, threshold):
         f1 = 0.0
     else:
         f1 = 2 * precision * recall / (precision + recall)
-    return f1, precision, recall, tp, fp, tn, fn, preds
+    return f1
 
 def cv_tune_pipeline_logreg(experiment_type = "baseline", n_splits = 5, inner_splits = 3, random_state = 3):
 

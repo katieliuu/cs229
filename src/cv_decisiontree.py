@@ -6,7 +6,7 @@ from sklearn.impute import IterativeImputer
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.tree import DecisionTreeClassifier
 from upsample import naive_upsample, get_natural_kappas
-from logreg.util import calculate_sample_weight
+from LogReg.util import calculate_sample_weight
 from kprototypes import run_k_prototypes
 from gmm import gmm_cluster_upsample
 from itertools import product
@@ -60,7 +60,7 @@ def f1_from_probs(y_true, probs, threshold):
         f1 = 0.0
     else:
         f1 = 2 * precision * recall / (precision + recall)
-    return f1, precision, recall, tp, fp, tn, fn, preds
+    return f1#, precision, recall, tp, fp, tn, fn, preds
 
 def cv_tune_pipeline_dt(experiment_type = "baseline", n_splits = 5, inner_splits = 3, random_state = 3):
 
