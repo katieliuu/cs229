@@ -48,6 +48,7 @@ def f1_from_probs(y_true, probs, threshold):
     tp = np.sum((preds == 1) & (y_true == 1))
     fp = np.sum((preds == 1) & (y_true == 0))
     fn = np.sum((preds == 0) & (y_true == 1))
+    tn = np.sum((preds == 0) & (y_true == 0))
 
     # precision
     if tp + fp == 0:
@@ -66,7 +67,7 @@ def f1_from_probs(y_true, probs, threshold):
         f1 = 0.0
     else:
         f1 = 2 * precision * recall / (precision + recall)
-    return f1
+    return f1, precision, recall, tp, fp, tn, fn, preds
 
 def cv_tune_pipeline_logreg(experiment_type = "baseline", n_splits = 5, inner_splits = 3, random_state = 3):
 

@@ -42,6 +42,7 @@ def f1_from_probs(y_true, probs, threshold):
     tp = np.sum((preds == 1) & (y_true == 1))
     fp = np.sum((preds == 1) & (y_true == 0))
     fn = np.sum((preds == 0) & (y_true == 1))
+    tn = np.sum((preds == 0) & (y_true == 0))
 
     # precision
     if tp + fp == 0:
@@ -60,7 +61,7 @@ def f1_from_probs(y_true, probs, threshold):
         f1 = 0.0
     else:
         f1 = 2 * precision * recall / (precision + recall)
-    return f1
+    return f1, precision, recall, tp, fp, tn, fn, preds
 
 def fit_numpy_mlp(X_train, y_train, X_dev, y_dev, hidden_width, lr, batch_size, activation, dropout, weight_decay, num_epochs, sample_weights):
     y_train_oh = one_hot_labels(y_train.to_numpy(), num_classes=2)

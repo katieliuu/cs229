@@ -14,7 +14,8 @@ def decision_tree(X_train, y_train, max_depth=None, min_samples_split=2, min_sam
 def test_tree(model, X_test, y_test):
     y_pred = model.predict(X_test)
     test_accuracy = model.score(X_test, y_test)
-    return y_pred, test_accuracy
+    probs = model.predict_proba(X_test)
+    return y_pred, test_accuracy, probs
 
 def print_results(y_test, y_pred):
     # 7. Print results
