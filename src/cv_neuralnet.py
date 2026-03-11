@@ -11,6 +11,7 @@ from gmm import gmm_cluster_upsample
 from itertools import product
 import json
 from neuralnetwork import nn_train, forward_prop, backward_prop, get_initial_params, one_hot_labels
+from joblib import Parallel, delayed
 
 # identify numeric vs. cat cols
 numeric_cols = ["RIDAGEYR", "LBXTC", "LBDHDD", "LBXSTR", "LBXSCR", "LBXHSCRP", "DBP_mean", "SBP_mean", "BMXBMI", "BMXHIP", "SMQ020"]
@@ -94,6 +95,125 @@ def predict_probs_numpy_mlp(X, params, activation):
         is_training=False, activation=activation, dropout_rate=0.0)
     return output[:, 1]
 
+def _eval_params_inner(params, X_train_f, y_train_f, experiment_type, nat_kap_1, nat_kap_4, nat_kap_6, inner_splits, random_state):
+    # evaluate a single hyperparameter combo via inner CV; returns (mean_f1, params)
+    scores_inner = []
+    skf_inner = StratifiedKFold(n_splits=inner_splits, shuffle=True, random_state=random_state)
+
+    # experiment-specific params
+    if experiment_type == "baseline":
+        lr, hidden_width, weight_decay, dropout, batch_size, activation, num_epochs, threshold = params
+        gamma = None
+        n_clusters = None
+        kappa_1 = None
+        kappa_4 = None
+        kappa_6 = None
+        sample_weight = None
+        n_comps = None
+        kappa_mult_1 = None
+        kappa_mult_4 = None
+        kappa_mult_6 = None
+    elif experiment_type == "upsample":
+        lr, hidden_width, weight_decay, dropout, batch_size, activation, num_epochs, threshold, kappa_mult_1, kappa_mult_4, kappa_mult_6 = params
+        kappa_1 = nat_kap_1 * kappa_mult_1
+        kappa_4 = nat_kap_4 * kappa_mult_4
+        kappa_6 = nat_kap_6 * kappa_mult_6
+        gamma = None
+        n_clusters = None
+        sample_weight = None
+        n_comps = None
+    elif experiment_type == "cluster":
+        lr, hidden_width, weight_decay, dropout, batch_size, activation, num_epochs, gamma, n_clusters, threshold = params
+        kappa_1 = None
+        kappa_4 = None
+        kappa_6 = None
+        sample_weight = None
+        n_comps = None
+        kappa_mult_1 = None
+        kappa_mult_4 = None
+        kappa_mult_6 = None
+    elif experiment_type == "cost_sensitive":
+        lr, hidden_width, weight_decay, dropout, batch_size, activation, num_epochs, threshold = params
+        gamma = None
+        n_clusters = None
+        kappa_1 = None
+        kappa_4 = None
+        kappa_6 = None
+        sample_weight = None
+        n_comps = None
+        kappa_mult_1 = None
+        kappa_mult_4 = None
+        kappa_mult_6 = None
+    elif experiment_type == "gmm":
+        lr, hidden_width, weight_decay, dropout, batch_size, activation, num_epochs, threshold, n_comps = params
+        gamma = None
+        n_clusters = None
+        kappa_1 = None
+        kappa_4 = None
+        kappa_6 = None
+        sample_weight = None
+        kappa_mult_1 = None
+        kappa_mult_4 = None
+        kappa_mult_6 = None
+
+    for (train_idx_inner, val_idx_inner) in skf_inner.split(X_train_f, y_train_f):
+        X_train_f_inner = X_train_f.iloc[train_idx_inner]
+        y_train_f_inner = y_train_f.iloc[train_idx_inner]
+        X_val_f_inner = X_train_f.iloc[val_idx_inner]
+        y_val_f_inner = y_train_f.iloc[val_idx_inner]
+
+        X_train_inner_preprocessed, mice, scaler, encoder = preprocess_fit_transform(X_train_f_inner)
+        X_val_inner_preprocessed = preprocess_transform(X_val_f_inner, mice, scaler, encoder)
+
+        # manipulate fold for specific experiment
+        if experiment_type == "upsample":
+            train_set_inner = pd.concat([X_train_inner_preprocessed, y_train_f_inner.rename("diabetes")], axis=1)
+            train_set_inner = naive_upsample(train_set_inner, kappa_1=kappa_1, kappa_4=kappa_4, kappa_6=kappa_6)
+            y_train_f_inner = train_set_inner["diabetes"]
+            X_train_inner_preprocessed = train_set_inner.drop(columns=["diabetes"])
+        
+        elif experiment_type == "cluster":
+            # clustering code. do this before one hot encoding, after scaling/imputation?
+            train_set_inner = pd.concat([X_train_inner_preprocessed, y_train_f_inner.rename("diabetes")], axis=1)
+            train_set_inner = run_k_prototypes(train_set_inner, gamma = gamma, n_clusters = n_clusters)
+            y_train_f_inner = train_set_inner["diabetes"]
+            X_train_inner_preprocessed = train_set_inner.drop(columns=["diabetes"])
+
+        elif experiment_type == "cost_sensitive":
+            train_set_inner = pd.concat([X_train_inner_preprocessed, y_train_f_inner.rename("diabetes")], axis=1)
+            sample_weight = calculate_sample_weight(train_set_inner)
+            y_train_f_inner = train_set_inner["diabetes"]
+            X_train_inner_preprocessed = train_set_inner.drop(columns=["diabetes"])
+        
+        elif experiment_type == "gmm":
+            train_set_inner = pd.concat([X_train_inner_preprocessed, y_train_f_inner.rename("diabetes")], axis=1)
+            train_set_inner = gmm_cluster_upsample(train_set_inner, n_components=n_comps)
+            y_train_f_inner = train_set_inner["diabetes"]
+            X_train_inner_preprocessed = train_set_inner.drop(columns=["diabetes"])
+
+        params_nn = fit_numpy_mlp(
+            X_train=X_train_inner_preprocessed,
+            y_train=y_train_f_inner,
+            X_dev=X_val_inner_preprocessed,
+            y_dev=y_val_f_inner,
+            hidden_width=hidden_width,
+            lr=lr,
+            batch_size=batch_size,
+            activation=activation,
+            dropout=dropout,
+            weight_decay=weight_decay,
+            num_epochs=num_epochs,
+            sample_weights=sample_weight
+        )
+        
+        probs = predict_probs_numpy_mlp(
+            X_val_inner_preprocessed, params_nn, activation=activation)
+        
+        scores_inner.append(f1_from_probs(y_val_f_inner, probs, threshold))
+        # inner model fit
+
+    return float(np.mean(scores_inner)), params
+
 def cv_tune_pipeline_nn(experiment_type = "baseline", n_splits = 5, inner_splits = 3, random_state = 3):
 
     np.random.seed(random_state)
@@ -140,128 +260,18 @@ def cv_tune_pipeline_nn(experiment_type = "baseline", n_splits = 5, inner_splits
         elif experiment_type == "gmm":
             param_grid = list(product(lr_grid, hidden_width_grid, weight_decay_grid, dropout_grid, batch_size_grid, activation_grid, num_epochs_grid, threshold_grid, n_comps_grid))
 
-        skf_inner = StratifiedKFold(n_splits=inner_splits, shuffle=True, random_state=random_state)
         score_star = -np.inf
         params_star = None
 
         #print(f"param_grid is {param_grid}")
         # loop through all possible hyperparam combinations, do inner 3-fold cv on them
-        for params in param_grid:
-            #print(f"param is {params}")
-            scores_inner = []
-            for (train_idx_inner, val_idx_inner) in skf_inner.split(X_train_f, y_train_f):
-                X_train_f_inner = X_train_f.iloc[train_idx_inner]
-                y_train_f_inner = y_train_f.iloc[train_idx_inner]
-                X_val_f_inner = X_train_f.iloc[val_idx_inner]
-                y_val_f_inner = y_train_f.iloc[val_idx_inner]
+        results = Parallel(n_jobs=-1)(
+            delayed(_eval_params_inner)(params, X_train_f, y_train_f, experiment_type, nat_kap_1, nat_kap_4, nat_kap_6, inner_splits, random_state)
+            for params in param_grid
+        )
 
-                # experiment-specific params
-                if experiment_type == "baseline":
-                    lr, hidden_width, weight_decay, dropout, batch_size, activation, num_epochs, threshold = params
-                    gamma = None
-                    n_clusters = None
-                    kappa_1 = None
-                    kappa_4 = None
-                    kappa_6 = None
-                    sample_weight = None
-                    n_comps = None
-                    kappa_mult_1 = None
-                    kappa_mult_4 = None
-                    kappa_mult_6 = None
-                elif experiment_type == "upsample":
-                    lr, hidden_width, weight_decay, dropout, batch_size, activation, num_epochs, threshold, kappa_mult_1, kappa_mult_4, kappa_mult_6 = params
-                    kappa_1 = nat_kap_1 * kappa_mult_1
-                    kappa_4 = nat_kap_4 * kappa_mult_4
-                    kappa_6 = nat_kap_6 * kappa_mult_6
-                    gamma = None
-                    n_clusters = None
-                    sample_weight = None
-                    n_comps = None
-                elif experiment_type == "cluster":
-                    lr, hidden_width, weight_decay, dropout, batch_size, activation, num_epochs, gamma, n_clusters, threshold = params
-                    kappa_1 = None
-                    kappa_4 = None
-                    kappa_6 = None
-                    sample_weight = None
-                    n_comps = None
-                    kappa_mult_1 = None
-                    kappa_mult_4 = None
-                    kappa_mult_6 = None
-                elif experiment_type == "cost_sensitive":
-                    lr, hidden_width, weight_decay, dropout, batch_size, activation, num_epochs, threshold = params
-                    gamma = None
-                    n_clusters = None
-                    kappa_1 = None
-                    kappa_4 = None
-                    kappa_6 = None
-                    sample_weight = None
-                    n_comps = None
-                    kappa_mult_1 = None
-                    kappa_mult_4 = None
-                    kappa_mult_6 = None
-                elif experiment_type == "gmm":
-                    lr, hidden_width, weight_decay, dropout, batch_size, activation, num_epochs, threshold, n_comps = params
-                    gamma = None
-                    n_clusters = None
-                    kappa_1 = None
-                    kappa_4 = None
-                    kappa_6 = None
-                    sample_weight = None
-                    kappa_mult_1 = None
-                    kappa_mult_4 = None
-                    kappa_mult_6 = None
-
-                X_train_inner_preprocessed, mice, scaler, encoder = preprocess_fit_transform(X_train_f_inner)
-                X_val_inner_preprocessed = preprocess_transform(X_val_f_inner, mice, scaler, encoder)
-
-                # manipulate fold for specific experiment
-                if experiment_type == "upsample":
-                    train_set_inner = pd.concat([X_train_inner_preprocessed, y_train_f_inner.rename("diabetes")], axis=1)
-                    train_set_inner = naive_upsample(train_set_inner, kappa_1=kappa_1, kappa_4=kappa_4, kappa_6=kappa_6)
-                    y_train_f_inner = train_set_inner["diabetes"]
-                    X_train_inner_preprocessed = train_set_inner.drop(columns=["diabetes"])
-                
-                elif experiment_type == "cluster":
-                    # clustering code. do this before one hot encoding, after scaling/imputation?
-                    train_set_inner = pd.concat([X_train_inner_preprocessed, y_train_f_inner.rename("diabetes")], axis=1)
-                    train_set_inner = run_k_prototypes(train_set_inner, gamma = gamma, n_clusters = n_clusters)
-                    y_train_f_inner = train_set_inner["diabetes"]
-                    X_train_inner_preprocessed = train_set_inner.drop(columns=["diabetes"])
-
-                elif experiment_type == "cost_sensitive":
-                    train_set_inner = pd.concat([X_train_inner_preprocessed, y_train_f_inner.rename("diabetes")], axis=1)
-                    sample_weight = calculate_sample_weight(train_set_inner)
-                    y_train_f_inner = train_set_inner["diabetes"]
-                    X_train_inner_preprocessed = train_set_inner.drop(columns=["diabetes"])
-                
-                elif experiment_type == "gmm":
-                    train_set_inner = pd.concat([X_train_inner_preprocessed, y_train_f_inner.rename("diabetes")], axis=1)
-                    train_set_inner = gmm_cluster_upsample(train_set_inner, n_components=n_comps)
-                    y_train_f_inner = train_set_inner["diabetes"]
-                    X_train_inner_preprocessed = train_set_inner.drop(columns=["diabetes"])
-
-                params_nn = fit_numpy_mlp(
-                    X_train=X_train_inner_preprocessed,
-                    y_train=y_train_f_inner,
-                    X_dev=X_val_inner_preprocessed,
-                    y_dev=y_val_f_inner,
-                    hidden_width=hidden_width,
-                    lr=lr,
-                    batch_size=batch_size,
-                    activation=activation,
-                    dropout=dropout,
-                    weight_decay=weight_decay,
-                    num_epochs=num_epochs,
-                    sample_weights=sample_weight
-                )
-                
-                probs = predict_probs_numpy_mlp(
-                    X_val_inner_preprocessed, params_nn, activation=activation)
-                
-                scores_inner.append(f1_from_probs(y_val_f_inner, probs, threshold))
-                # inner model fit
-            # running update of optimal parameters
-            mean_inner = float(np.mean(scores_inner))
+        # running update of optimal parameters
+        for mean_inner, params in results:
             if mean_inner > score_star:
                 score_star = mean_inner
                 params_star = params
