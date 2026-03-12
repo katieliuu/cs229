@@ -7,21 +7,19 @@ import util
 import numpy as np
 import argparse
 from logreg_src import *
-from kprototypes import *
-from cv_logreg import f1_from_probs
-from sklearn.metrics import accuracy_score, classification_report, confusion_matrix, f1_score, ConfusionMatrixDisplay
-import matplotlib.pyplot as plt
-
+import sys
+import os
+sys.path.append(
+    os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
+)
+from src.kprototypes import run_k_prototypes
+from util import *
 
 def main(test: bool = False):
-
-    X_original, Y_original = util.load_csv('src/data/model_ready/train_processed.csv', label_col='diabetes', add_intercept=True)
-    print("X_original shape:", X_original.shape)
-    print("Y_original shape:", Y_original.shape)
-    
-    training_data = np.concatenate((X_original, Y_original), axis=1)
+    # Load data
+    training_data = pd.read_csv('src/data/model_ready/train_processed.csv')
     cluster_data = run_k_prototypes(training_data, max_iter=150, n_clusters=3, print_every=10, gamma=1.0)#TODO: add hyperparameter from Charlotte's CV results
-    X_cluster, Y_cluster = cluster_data.drop(columns=["diabetes"]), cluster_data["diabetes"]
+    X_cluster, Y_cluster = cluster_data.drop(columns=["diabetes"]).to_numpy(), cluster_data["diabetes"].to_numpy()
     
     #Logistic regression with cluster data
     theta_w_cluster = logistic_regression(X_cluster, Y_cluster, max_iter=5000, lambda_reg=10) #TODO: add hyperparameter from Charlotte's CV results
@@ -32,17 +30,8 @@ def main(test: bool = False):
         threshold_w_cluster = 0 #TODO
         
         prob_w_cluster = 1 / (1 + np.exp(-(X_test @ theta_w_cluster)))
-        f1_w_cluster, precision_w_cluster, recall_w_cluster, tp_w_cluster, fp_w_cluster, tn_w_cluster, fn_w_cluster, preds_w_cluster = f1_from_probs(Y_test, prob_w_cluster, threshold_w_cluster)
-        #TODO: implement other metrics
         
-        #Confusion Matrix
-        cm = confusion_matrix(Y_test, preds_w_cluster, labels=['Diabetic', 'Non-Diabetic'])
-        disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=['Diabetic', 'Non-Diabetic'])
-        disp.plot()
-        plt.show()
-        #Accuracy
-        accuracy = accuracy_score(Y_test, preds_w_cluster)
-        print(f'With Cluster Data Accuracy: {accuracy}')
+        print_results(Y_test, prob_w_cluster, threshold_w_cluster)
         
     
 if __name__ == '__main__':

@@ -3,7 +3,61 @@ import matplotlib.pyplot as plt
 import numpy as np
 import json
 import pandas as pd
+from sklearn.metrics import accuracy_score, confusion_matrix, ConfusionMatrixDisplay, precision_recall_curve
 
+
+def print_results(y_test, y_probs, threshold):
+    print("First 50 probabilities:", y_probs[0:49])
+    #f1 score
+    f1, y_pred = f1_from_probs(y_test, y_probs, threshold)
+    print(f'F1 Score: {f1}')
+    
+    #Confusion Matrix
+    cm = confusion_matrix(y_test, y_pred)#, labels=['Diabetic', 'Non-Diabetic'])
+    disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=['Diabetic', 'Non-Diabetic'])
+    disp.plot()
+    plt.show()
+    
+    #Accuracy
+    accuracy = accuracy_score(y_test, y_pred)
+    print(f'Accuracy: {accuracy}')
+    
+    #Precision-Recall Curve
+    precision, recall, thresholds = precision_recall_curve(y_test, y_probs)
+    plt.plot(recall, precision, marker='o')
+    for i, t in enumerate(thresholds):
+        plt.annotate(f"{t:.2f}", (recall[i+1], precision[i+1]))
+    plt.xlabel('Recall')
+    plt.ylabel('Precision')
+    plt.title('Precision-Recall Curve with Thresholds')
+    plt.show()
+    
+def f1_from_probs(y_true, probs, threshold):
+    y_true = np.asarray(y_true)
+    preds = (probs >= threshold).astype(int)
+    tp = np.sum((preds == 1) & (y_true == 1))
+    fp = np.sum((preds == 1) & (y_true == 0))
+    fn = np.sum((preds == 0) & (y_true == 1))   
+    tn = np.sum((preds == 0) & (y_true == 0))
+
+    # precision
+    if tp + fp == 0:
+        precision = 0.0
+    else:
+        precision = tp / (tp + fp)
+
+    # recall
+    if tp + fn == 0:
+        recall = 0.0
+    else:
+        recall = tp / (tp + fn)
+
+    # f1
+    if precision + recall == 0:
+        f1 = 0.0
+    else:
+        f1 = 2 * precision * recall / (precision + recall)
+    return f1, preds
 
 def calculate_sample_weight(dframe):
     """Calculate sample weight for each class"""

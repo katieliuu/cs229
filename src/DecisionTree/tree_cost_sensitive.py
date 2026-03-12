@@ -3,53 +3,34 @@ from sklearn.model_selection import train_test_split
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix, f1_score, ConfusionMatrixDisplay
 from tree_src import *
-import util
+from util import *
 import argparse
-from cv_logreg import f1_from_probs
 import matplotlib.pyplot as plt
 
 def main(test: bool = False):
-    #Train Model
-    X_original, Y_original = util.load_csv('src/data/model_ready/train_raw.csv', label_col='diabetes', add_intercept=True)
-    print("X_original shape:", X_original.shape)
-    print("Y_original shape:", Y_original.shape)
+    #Load data
+    training_data = pd.read_csv('src/data/model_ready/train_processed.csv')
+    X_original, Y_original = training_data.drop(columns=["diabetes"]), training_data["diabetes"]
     
-    #baseline without cost sensitive learning
-    model_wo_cs, train_accuracy_wo_cs = decision_tree(X_original, Y_original) #TODO: add hyperparameter from Charlotte's CV results
+    #Baseline with regularization without cost sensitive learning
+    model_wo_cs, train_accuracy_wo_cs = decision_tree(X_original, Y_original, max_depth=None, min_samples_split=2, min_samples_leaf=1)
     
-    #baseline with cost sensitive learning
-    X_original_df = pd.read_csv('src/data/model_ready/train_raw.csv')
-    sample_weight = util.calculate_sample_weight(X_original_df)
-    model_w_cs, train_accuracy_w_cs = decision_tree(X_original, Y_original, max_depth=None, min_samples_split=2, min_samples_leaf=1, sample_weight=sample_weight) #TODO: add hyperparameter from Charlotte's CV results
+    #baseline with regularizationwith cost sensitive learning
+    sample_weight = calculate_sample_weight(training_data)
+    model_w_cs, train_accuracy_w_cs = decision_tree(X_original, Y_original, max_depth=None, min_samples_split=2, min_samples_leaf=1, sample_weight=sample_weight)
     
-    if test:
-        threshold_wo_cs = 0 #TODO
-        X_test, Y_test = util.load_csv('src/data/model_ready/test_processed.csv', label_col='diabetes', add_intercept=True)
-        Y_pred_wo_cs, test_accuracy_wo_cs, probs_wo_cs = test_tree(model_wo_cs, X_test, Y_test)
-        f1_wo_cs, precision_wo_cs, recall_wo_cs, tp_wo_cs, fp_wo_cs, tn_wo_cs, fn_wo_cs, preds_wo_cs = f1_from_probs(Y_test, probs_wo_cs, threshold_wo_cs)
+    if test: 
+        testing_data = pd.read_csv('src/data/model_ready/test_processed.csv')
+        X_test, Y_test = testing_data.drop(columns=["diabetes"]), testing_data["diabetes"]
         
-        threshold_w_cs = 0 #TODO
-        Y_pred_w_cs, test_accuracy_w_cs, probs_w_cs = test_tree(model_w_cs, X_test, Y_test)
-        f1_w_cs, precision_w_cs, recall_w_cs, tp_w_cs, fp_w_cs, tn_w_cs, fn_w_cs, preds_w_cs = f1_from_probs(Y_test, probs_w_cs, threshold_w_cs)
-        #TODO: implement other metrics (confusion matrix, accuracy, f1)
-    
-        #Confusion Matrix
-        cm = confusion_matrix(Y_test, preds_wo_cs, labels=['Diabetic', 'Non-Diabetic'])
-        disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=['Diabetic', 'Non-Diabetic'])
-        disp.plot()
-        plt.show()
-        #Accuracy
-        accuracy = accuracy_score(Y_test, preds_wo_cs)
-        print(f'Without Cost Sensitive Learning Accuracy: {accuracy}')
+        threshold_wo_cs = 0.25
+        probs_wo_cs = test_tree(model_wo_cs, X_test, Y_test)
         
-        #Confusion Matrix
-        cm = confusion_matrix(Y_test, preds_w_cs, labels=['Diabetic', 'Non-Diabetic'])
-        disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=['Diabetic', 'Non-Diabetic'])
-        disp.plot()
-        plt.show()
-        #Accuracy
-        accuracy = accuracy_score(Y_test, preds_w_cs)
-        print(f'With Cost Sensitive Learning Accuracy: {accuracy}')
+        threshold_w_cs = 0.25 
+        probs_w_cs = test_tree(model_w_cs, X_test, Y_test)
+    
+        print_results(Y_test, probs_w_cs, threshold_w_cs)
+        print_results(Y_test, probs_wo_cs, threshold_wo_cs)
         
         
         

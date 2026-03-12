@@ -6,7 +6,7 @@ from sklearn.impute import IterativeImputer
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.tree import DecisionTreeClassifier
 from upsample import naive_upsample, get_natural_kappas
-from LogReg.util import calculate_sample_weight
+from logreg.util import calculate_sample_weight
 from kprototypes import run_k_prototypes
 from gmm import gmm_cluster_upsample
 from itertools import product
@@ -68,7 +68,7 @@ def cv_tune_pipeline_dt(experiment_type = "baseline", n_splits = 5, inner_splits
     y = df["diabetes"].astype(int)
     X = df.drop(columns=["diabetes"])
 
-    max_depth_grid = [3, 4, 5, 6, 8, 10, None]
+    max_depth_grid = [5, 10, 15, 20, 25, 30]
     min_samples_split_grid = [2, 5, 10, 20]
     min_samples_leaf_grid = [1, 2, 5, 10]
     threshold_grid = [0.25, 0.35, 0.45, 0.55]
