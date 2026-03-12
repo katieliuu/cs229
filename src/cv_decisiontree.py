@@ -6,7 +6,7 @@ from sklearn.impute import IterativeImputer
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.tree import DecisionTreeClassifier
 from upsample import naive_upsample, get_natural_kappas
-from LogReg.util import calculate_sample_weight
+from logreg.util import calculate_sample_weight
 from kprototypes import run_k_prototypes
 from gmm import gmm_cluster_upsample
 from itertools import product

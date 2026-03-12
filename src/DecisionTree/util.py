@@ -4,6 +4,32 @@ import numpy as np
 import json
 import pandas as pd
 
+def f1_from_probs(y_true, probs, threshold):
+    y_true = np.asarray(y_true)
+    preds = (probs >= threshold).astype(int)
+    tp = np.sum((preds == 1) & (y_true == 1))
+    fp = np.sum((preds == 1) & (y_true == 0))
+    fn = np.sum((preds == 0) & (y_true == 1))   
+    tn = np.sum((preds == 0) & (y_true == 0))
+
+    # precision
+    if tp + fp == 0:
+        precision = 0.0
+    else:
+        precision = tp / (tp + fp)
+
+    # recall
+    if tp + fn == 0:
+        recall = 0.0
+    else:
+        recall = tp / (tp + fn)
+
+    # f1
+    if precision + recall == 0:
+        f1 = 0.0
+    else:
+        f1 = 2 * precision * recall / (precision + recall)
+    return f1, preds
 
 def calculate_sample_weight(dframe):
     """Calculate sample weight for each class"""

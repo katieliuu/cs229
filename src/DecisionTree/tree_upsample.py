@@ -5,39 +5,36 @@ from sklearn.metrics import accuracy_score, classification_report, confusion_mat
 from tree_src import *
 import util
 import numpy as np
-from upsample import *
+import sys
+import os
+sys.path.append(
+    os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
+)
+from src.upsample import *
 import argparse
-from cv_logreg import f1_from_probs
 import matplotlib.pyplot as plt
 
 def main(test: bool = False):
-    #Train Model
-    X_original, Y_original = util.load_csv('src/data/model_ready/train_raw.csv', label_col='diabetes', add_intercept=True)
-    print("X_original shape:", X_original.shape)
-    print("Y_original shape:", Y_original.shape)
+    #Load data
+    training_data = pd.read_csv('src/data/model_ready/train_processed.csv')
+    kappa_1, kappa_4, kappa_6 = get_natural_kappas(training_data)
+    kappa_mult_1, kappa_mult_4, kappa_mult_6 = 1.5, 1.0, 1.0
+    upsampled_training = naive_upsample(training_data, kappa_mult_1 * kappa_1, kappa_mult_4 * kappa_4, kappa_mult_6 * kappa_6)
     
-    training_data = np.concatenate((X_original, Y_original), axis=1)
-    upsampled_training = naive_upsample(training_data, kappa_1, kappa_4, kappa_6) #TODO: add kappa values from cv
     X_upsampled, Y_upsampled = upsampled_training.drop(columns=["diabetes"]), upsampled_training["diabetes"]
     
-    #decision tree with upsampled data
-    model_upsampled, train_accuracy_upsampled = decision_tree(X_upsampled, Y_upsampled, max_depth=None, min_samples_split=2, min_samples_leaf=1, sample_weight=None) #TODO: add hyperparameter from Charlotte's CV results
+    #Decision tree with upsampled data
+    model_upsampled, train_accuracy_upsampled = decision_tree(X_upsampled, Y_upsampled, max_depth=None, min_samples_split=2, min_samples_leaf=1, sample_weight=None)
     
+    print("Train Accuracy With Upsampled Data:", train_accuracy_upsampled)
     if test:
-        threshold_upsampled = 0 #TODO
-        X_test, Y_test = util.load_csv('src/data/model_ready/test_processed.csv', label_col='diabetes', add_intercept=True)
-        Y_pred_upsampled, test_accuracy_upsampled, probs_upsampled = test_tree(model_upsampled, X_test, Y_test)
-        f1_upsampled, precision_upsampled, recall_upsampled, tp_upsampled, fp_upsampled, tn_upsampled, fn_upsampled, preds_upsampled = f1_from_probs(Y_test, probs_upsampled, threshold_upsampled)
-        #TODO: implement other metrics (confusion matrix, accuracy, f1)
+        testing_data = pd.read_csv('src/data/model_ready/test_processed.csv')
+        X_test, Y_test = testing_data.drop(columns=["diabetes"]), testing_data["diabetes"]
         
-        #Confusion Matrix
-        cm = confusion_matrix(Y_test, preds_upsampled, labels=['Diabetic', 'Non-Diabetic'])
-        disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=['Diabetic', 'Non-Diabetic'])
-        disp.plot()
-        plt.show()
-        #Accuracy
-        accuracy = accuracy_score(Y_test, preds_upsampled)
-        print(f'Accuracy: {accuracy}')
+        threshold_upsampled = 0.25
+        probs_upsampled = test_tree(model_upsampled, X_test, Y_test)
+        
+        print_results(Y_test, probs_upsampled, threshold_upsampled)
         
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Test or Train")
