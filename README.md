@@ -33,9 +33,9 @@ We ran the following imbalance mitigation techniques:
 Hyperparameters were tuned using 5-fold cross-validation. Each model-experiment pair was evaluated on a hold-out test set using F1 score, accuracy, AUPRC, precision, and recall.
 
 ## Authors
-Charlotte Imbert - MS Statistics, Stanford University
-Katie Liu - MS Computer Science, Stanford University
-Benjia Zhang - MS Electrical Engineering, Stanford University
+- Charlotte Imbert - MS Statistics, Stanford University
+- Katie Liu - MS Computer Science, Stanford University
+- Benjia Zhang - MS Electrical Engineering, Stanford University
 
 Every time you pull from the repo:
 - Run uv sync
