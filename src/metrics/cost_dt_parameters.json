@@ -5,7 +5,7 @@
             "fold": 0,
             "f1": 0.9183187946074544,
             "inner_f1_star": 0.9061744041688891,
-            "max_depth": null,
+            "max_depth": 30,
             "min_samples_split": 2,
             "min_samples_leaf": 1,
             "threshold": 0.25,
@@ -25,8 +25,8 @@
         {
             "fold": 1,
             "f1": 0.9229547259729944,
-            "inner_f1_star": 0.8931709791127479,
-            "max_depth": null,
+            "inner_f1_star": 0.8936917107406851,
+            "max_depth": 25,
             "min_samples_split": 2,
             "min_samples_leaf": 1,
             "threshold": 0.25,
@@ -45,9 +45,9 @@
         },
         {
             "fold": 2,
-            "f1": 0.9330143540669855,
+            "f1": 0.9307875894988067,
             "inner_f1_star": 0.8973316922409875,
-            "max_depth": null,
+            "max_depth": 25,
             "min_samples_split": 2,
             "min_samples_leaf": 1,
             "threshold": 0.25,
@@ -66,9 +66,9 @@
         },
         {
             "fold": 3,
-            "f1": 0.9365853658536586,
-            "inner_f1_star": 0.899780251266641,
-            "max_depth": null,
+            "f1": 0.9335494327390601,
+            "inner_f1_star": 0.8997842818416272,
+            "max_depth": 25,
             "min_samples_split": 2,
             "min_samples_leaf": 1,
             "threshold": 0.25,
@@ -87,9 +87,9 @@
         },
         {
             "fold": 4,
-            "f1": 0.9317269076305222,
+            "f1": 0.9358974358974359,
             "inner_f1_star": 0.9014410746585658,
-            "max_depth": null,
+            "max_depth": 25,
             "min_samples_split": 2,
             "min_samples_leaf": 1,
             "threshold": 0.25,
@@ -108,7 +108,7 @@
         }
     ],
     "summary": {
-        "f1_mean": 0.9285200296263231,
-        "f1_std": 0.007592273503958966
+        "f1_mean": 0.9283015957431504,
+        "f1_std": 0.007410500667838147
     }
 }
