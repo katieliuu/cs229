@@ -3,7 +3,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix, f1_score, ConfusionMatrixDisplay
 from tree_src import *
-import util
+from util import *
 import argparse
 import matplotlib.pyplot as plt
 
@@ -16,7 +16,7 @@ def main(test: bool = False):
     model_wo_cs, train_accuracy_wo_cs = decision_tree(X_original, Y_original, max_depth=None, min_samples_split=2, min_samples_leaf=1)
     
     #baseline with regularizationwith cost sensitive learning
-    sample_weight = util.calculate_sample_weight(training_data)
+    sample_weight = calculate_sample_weight(training_data)
     model_w_cs, train_accuracy_w_cs = decision_tree(X_original, Y_original, max_depth=None, min_samples_split=2, min_samples_leaf=1, sample_weight=sample_weight)
     
     if test: 

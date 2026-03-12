@@ -3,9 +3,8 @@ from sklearn.model_selection import train_test_split
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix, f1_score, ConfusionMatrixDisplay
 from tree_src import *
-import util
+from util import *
 import argparse
-import matplotlib.pyplot as plt
 
 def main(test: bool = False):
     #Load data

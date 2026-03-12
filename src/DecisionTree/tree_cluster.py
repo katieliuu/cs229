@@ -11,7 +11,7 @@ sys.path.append(
 )
 from src.kprototypes import run_k_prototypes
 import argparse
-import util
+from util import *
 import matplotlib.pyplot as plt
 
 def main(test: bool = False):

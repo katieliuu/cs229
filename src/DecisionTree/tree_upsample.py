@@ -3,7 +3,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix, f1_score, ConfusionMatrixDisplay
 from tree_src import *
-import util
+from util import *
 import numpy as np
 import sys
 import os
@@ -20,7 +20,6 @@ def main(test: bool = False):
     kappa_1, kappa_4, kappa_6 = get_natural_kappas(training_data)
     kappa_mult_1, kappa_mult_4, kappa_mult_6 = 1.5, 1.0, 1.0
     upsampled_training = naive_upsample(training_data, kappa_mult_1 * kappa_1, kappa_mult_4 * kappa_4, kappa_mult_6 * kappa_6)
-    
     X_upsampled, Y_upsampled = upsampled_training.drop(columns=["diabetes"]), upsampled_training["diabetes"]
     
     #Decision tree with upsampled data
