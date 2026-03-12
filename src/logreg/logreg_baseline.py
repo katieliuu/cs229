@@ -13,20 +13,19 @@ from util import *
 
 
 def main(test: bool = False):
-    X_original, Y_original = util.load_csv('src/data/model_ready/train_processed.csv', label_col='diabetes', add_intercept=True)
+    X_original, Y_original = load_csv('src/data/model_ready/train_processed.csv', label_col='diabetes', add_intercept=True)
     
     #Baseline without regularization
     theta_wo_reg = logistic_regression(X_original, Y_original, max_iter=5000, lambda_reg=0)
     
     #Baseline with regularization
-    theta_w_reg = logistic_regression(X_original, Y_original, max_iter=5000, lambda_reg=10) #TODO: add hyperparameter from Charlotte's CV results
-    
+    theta_w_reg = logistic_regression(X_original, Y_original, max_iter=5000, lambda_reg=0.0001) #TODO: add hyperparameter from Charlotte's CV results
     
     
     if test:
-        X_test, Y_test = util.load_csv('src/data/model_ready/test_processed.csv', label_col='diabetes', add_intercept=True)
-        threshold_wo_reg = 0 #TODO
-        threshold_w_reg = 0 #TODO
+        X_test, Y_test = load_csv('src/data/model_ready/test_processed.csv', label_col='diabetes', add_intercept=True)
+        threshold_wo_reg = 0.35 #TODO
+        threshold_w_reg = 0.35 #TODO
         
         prob_wo_reg = 1 / (1 + np.exp(-(X_test @ theta_wo_reg)))
         print_results(Y_test, prob_wo_reg, threshold_wo_reg)
