@@ -115,20 +115,20 @@ def print_results(y_test, y_probs, threshold, output_model_path: str=None, exper
     print(f'PR AUC: {pr_auc}')
     
     metrics = {
-    "accuracy": accuracy,
-    "f1": f1,
-    "pr_auc": pr_auc,
-    }
+    "accuracy": float(accuracy),
+    "f1": float(f1),
+    "pr_auc": float(pr_auc),
+}
 
     if ethnicity is not None:
-        csv_file_path = os.path.join(output_model_path, f"{experiment_type}_{ethnicity}_metrics.csv")
+        json_file_path = os.path.join(output_model_path, f"{experiment_type}_{ethnicity}_metrics.json")
     else:
-        csv_file_path = os.path.join(output_model_path, f"{experiment_type}_metrics.csv")
-    with open(csv_file_path, "w", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=metrics.keys())
-        writer.writeheader()
-        writer.writerow(metrics)
-        print(f"Metrics saved to {csv_file_path}") 
+        json_file_path = os.path.join(output_model_path, f"{experiment_type}_metrics.json")
+    
+    with open(json_file_path, "w") as f:
+        json.dump(metrics, f, indent=4)
+    
+    print(f"Metrics saved to {json_file_path}")
     
 def f1_from_probs(y_true, probs, threshold):
     y_true = np.asarray(y_true)
