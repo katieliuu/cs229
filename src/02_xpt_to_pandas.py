@@ -15,9 +15,9 @@ import pandas as pd
 
 data_dir = Path("src/data/raw_xpt")
 xpt_list = os.listdir(data_dir)
-print("Files and directories in '", data_dir, "' :")
 print(xpt_list)
 
+# create a dictionary of the datasets in xpt_list
 datasets_dict = {}
 for file in xpt_list:
     path = data_dir / file
@@ -25,6 +25,7 @@ for file in xpt_list:
     df_name = path.stem
     datasets_dict[df_name] = df
 
+# join all the datasets into one master dataset
 joined = datasets_dict['DEMO_J']
 datasets = list(dataset for name, dataset in datasets_dict.items() if name != 'DEMO_J')
 print("initial rows:", joined.shape[0])
@@ -32,6 +33,7 @@ for d in datasets:
 # iterate through the dataframes in the dictionary, left joining one at a time
     joined = pd.merge(joined, d, on="SEQN", how="outer")
 
+# verify dimensions post-join
 print("Final rows:", joined.shape[0])
 joined["SEQN"].is_unique
 
@@ -39,6 +41,5 @@ joined["SEQN"].is_unique
 analysis_dir = Path('src/data/analysis_ready')
 analysis_dir.mkdir(parents=True, exist_ok=True)
 
-# again might have to do os makedir
 joined.to_csv("src/data/analysis_ready/nhanes_joined_2017_2018.csv", index=False)
 
