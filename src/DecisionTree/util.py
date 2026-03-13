@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import json
 import pandas as pd
-from sklearn.metrics import accuracy_score, confusion_matrix, ConfusionMatrixDisplay, precision_recall_curve
+from sklearn.metrics import accuracy_score, confusion_matrix, ConfusionMatrixDisplay, precision_recall_curve, auc
 import os
 
 
@@ -60,6 +60,7 @@ def evaluate_by_ethnicity(X_test_df, y_test, y_probs, threshold, output_model_pa
             )
         else:
             print(f"\nWarning: Column {col_name} not found in X_test_df.")
+            
 
 def print_results(y_test, y_probs, threshold, output_model_path: str=None, experiment_type: str=None, ethnicity: str=None):
     '''
@@ -72,7 +73,7 @@ def print_results(y_test, y_probs, threshold, output_model_path: str=None, exper
         ethnicity: Ethnicity of the patient(should be 1.0, 3.0, 4.0, 6.0)
     '''
     
-    print("First 50 probabilities:", y_probs[0:49])
+    #print("First 50 probabilities:", y_probs[0:49])
     #f1 score
     f1, y_pred = f1_from_probs(y_test, y_probs, threshold)
     print(f'F1 Score: {f1}')
@@ -81,6 +82,7 @@ def print_results(y_test, y_probs, threshold, output_model_path: str=None, exper
     accuracy = accuracy_score(y_test, y_pred)
     print(f'Accuracy: {accuracy}')
     
+
     #Confusion Matrix
     cm = confusion_matrix(y_test, y_pred)
     disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=['Non-Diabetic', 'Diabetic'])
@@ -91,26 +93,31 @@ def print_results(y_test, y_probs, threshold, output_model_path: str=None, exper
     else:
         confusion_matrix_path = os.path.join(output_model_path, f"{experiment_type}_confusion_matrix.png")
     disp.figure_.savefig(confusion_matrix_path, dpi=300, bbox_inches='tight')
+    plt.close(disp.figure_)
     
     #Precision-Recall Curve
     precision, recall, thresholds = precision_recall_curve(y_test, y_probs)
+    plt.figure()
     plt.plot(recall, precision, marker='o')
-    for i, t in enumerate(thresholds):
-        plt.annotate(f"{t:.2f}", (recall[i+1], precision[i+1]))
+    #for i, t in enumerate(thresholds):
+    #    plt.annotate(f"{t:.2f}", (recall[i+1], precision[i+1]))
     plt.xlabel('Recall')
     plt.ylabel('Precision')
-    plt.title('Precision-Recall Curve with Thresholds')
+    plt.title('Precision-Recall Curve')
     if ethnicity is not None:
         precision_recall_curve_path = os.path.join(output_model_path, f"{experiment_type}_{ethnicity}_precision_recall_curve.png")
     else:
         precision_recall_curve_path = os.path.join(output_model_path, f"{experiment_type}_precision_recall_curve.png")
     plt.savefig(precision_recall_curve_path, dpi=300, bbox_inches='tight')
+    plt.close()
+    #AUC
+    pr_auc = auc(recall, precision)
+    print(f'PR AUC: {pr_auc}')
     
     metrics = {
     "accuracy": accuracy,
-    "precision": precision,
-    "recall": recall,
     "f1": f1,
+    "pr_auc": pr_auc,
     }
 
     if ethnicity is not None:
@@ -121,8 +128,7 @@ def print_results(y_test, y_probs, threshold, output_model_path: str=None, exper
         writer = csv.DictWriter(f, fieldnames=metrics.keys())
         writer.writeheader()
         writer.writerow(metrics)
-        print(f"Metrics saved to {csv_file_path}")
-      
+        print(f"Metrics saved to {csv_file_path}") 
     
 def f1_from_probs(y_true, probs, threshold):
     y_true = np.asarray(y_true)
