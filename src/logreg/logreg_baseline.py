@@ -29,13 +29,16 @@ def main(test: bool = False):
     
     if test:
         X_test, Y_test = load_csv('src/data/model_ready/test_processed.csv', label_col='diabetes', add_intercept=True)
+        test_data_df = pd.read_csv('src/data/model_ready/test_processed.csv')
+        X_test_df, Y_test_df = test_data_df.drop(columns=["diabetes"]), test_data_df["diabetes"]
         
+        output_model_path = 'src/results/logreg'
         
         prob_wo_reg = 1 / (1 + np.exp(-(X_test @ theta_wo_reg)))
-        print_results(Y_test, prob_wo_reg, threshold_wo_reg)
+        evaluate_by_ethnicity(X_test_df, Y_test_df, prob_wo_reg, threshold_wo_reg, output_model_path=output_model_path, experiment_type='baseline_wo_reg')
         
         prob_w_reg = 1 / (1 + np.exp(-(X_test @ theta_w_reg)))
-        print_results(Y_test, prob_w_reg, threshold_w_reg)
+        evaluate_by_ethnicity(X_test_df, Y_test_df, prob_w_reg, threshold_w_reg, output_model_path=output_model_path, experiment_type='baseline_w_reg')
         
     
 if __name__ == '__main__':
