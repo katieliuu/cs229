@@ -7,6 +7,59 @@ from sklearn.metrics import accuracy_score, confusion_matrix, ConfusionMatrixDis
 import os
 
 
+def evaluate_by_ethnicity(X_test_df, y_test, y_probs, threshold, output_model_path: str, experiment_type: str):
+    """
+    Evaluates the model overall and splits the evaluation across 4 specific ethnicity groups.
+    
+    Args:
+        X_test_df: Pandas DataFrame of the testing features
+        y_test: True labels
+        y_probs: Predicted probabilities
+        threshold: Threshold for classification
+        output_model_path: Path to save the plots and CSVs
+        experiment_type: Name of the experiment
+    """
+    print("\n" + "="*50)
+    print(f"OVERALL RESULTS: {experiment_type}")
+    print("="*50)
+    print_results(y_test, y_probs, threshold, output_model_path, experiment_type)
+    
+    # results by ethnicity
+    ethnicities = ['1.0', '3.0', '4.0', '6.0']
+    
+    for eth in ethnicities:
+        col_name = f"RIDRETH3_{eth}"
+        
+        # check if the column exists in the dataframe
+        if col_name in X_test_df.columns:
+            # create a boolean mask where the ethnicity column is 1
+            mask = (X_test_df[col_name] == 1).to_numpy()
+            
+            # slice the labels and probabilities using the mask
+            y_test_eth = y_test[mask]
+            y_probs_eth = y_probs[mask]
+            
+            # prevent errors if an ethnicity has 0 samples in the test split
+            if len(y_test_eth) == 0:
+                print(f"\nNo samples found for ethnicity {eth}. Skipping...")
+                continue
+                
+            print("\n" + "-"*50)
+            print(f"RESULTS FOR ETHNICITY: {eth} ({experiment_type})")
+            print(f"Sample size: {len(y_test_eth)}")
+            print("-"*50)
+            
+            # pass the split data to original print_results function
+            print_results(
+                y_test=y_test_eth, 
+                y_probs=y_probs_eth, 
+                threshold=threshold, 
+                output_model_path=output_model_path, 
+                experiment_type=experiment_type, 
+                ethnicity=eth
+            )
+        else:
+            print(f"\nWarning: Column {col_name} not found in X_test_df.")
 
 def print_results(y_test, y_probs, threshold, output_model_path: str=None, experiment_type: str=None, ethnicity: str=None):
     '''
