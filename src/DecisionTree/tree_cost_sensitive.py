@@ -23,11 +23,9 @@ def main(test: bool = False):
     if test: 
         testing_data = pd.read_csv('src/data/model_ready/test_processed.csv')
         X_test, Y_test = testing_data.drop(columns=["diabetes"]), testing_data["diabetes"]
-        
+        output_model_path = 'src/results/DecisionTree'
         probs_w_cs = test_tree(model_w_cs, X_test, Y_test)
-    
-        print_results(Y_test, probs_w_cs, threshold_w_cs)
-        
+        evaluate_by_ethnicity(X_test, Y_test, probs_w_cs, threshold_w_cs, output_model_path=output_model_path, experiment_type='cost_sensitive')
         
         
 if __name__ == '__main__':
