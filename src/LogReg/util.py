@@ -13,7 +13,7 @@ def print_results(y_test, y_probs, threshold, output_model_path: str=None, exper
         y_probs: Predicted probabilities
         threshold: Threshold for classification
         output_model_path: Path to save the model(should be ../results/logreg/ or ../results/decision_tree/ or ../results/gmm/ or ../results/cost_sensitive/)
-        experiment_type: Type of experiment(should be baseline, upsample, cluster, gmm, cost_sensitive)
+        experiment_type: Type of experiment(should be baseline_wo_reg, baseline_w_reg, upsample, cluster, gmm, cost_sensitive)
         ethnicity: Ethnicity of the patient(should be 1.0, 3.0, 4.0, 6.0)
     '''
     
@@ -25,7 +25,8 @@ def print_results(y_test, y_probs, threshold, output_model_path: str=None, exper
     #Accuracy
     accuracy = accuracy_score(y_test, y_pred)
     print(f'Accuracy: {accuracy}')
-    import pdb; pdb.set_trace()
+    
+
     #Confusion Matrix
     cm = confusion_matrix(y_test, y_pred)
     disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=['Non-Diabetic', 'Diabetic'])
