@@ -7,6 +7,7 @@ from sklearn.metrics import accuracy_score, confusion_matrix, ConfusionMatrixDis
 import os
 
 
+
 def print_results(y_test, y_probs, threshold, output_model_path: str=None, experiment_type: str=None, ethnicity: str=None):
     '''
     Args:
@@ -26,11 +27,11 @@ def print_results(y_test, y_probs, threshold, output_model_path: str=None, exper
     #Accuracy
     accuracy = accuracy_score(y_test, y_pred)
     print(f'Accuracy: {accuracy}')
-    import pdb; pdb.set_trace()
+    
     #Confusion Matrix
     cm = confusion_matrix(y_test, y_pred)
     disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=['Non-Diabetic', 'Diabetic'])
-    # disp.plot()
+    disp.plot()
     # plt.show()
     if ethnicity is not None:
         confusion_matrix_path = os.path.join(output_model_path, f"{experiment_type}_{ethnicity}_confusion_matrix.png")

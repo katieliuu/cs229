@@ -11,6 +11,9 @@ from src.kprototypes import run_k_prototypes
 from util import *
 
 def main(test: bool = False):
+    #Threshold
+    threshold_w_cluster = 0.35
+    
     # Load data
     training_data = pd.read_csv('src/data/model_ready/train_processed.csv')
     cluster_data = run_k_prototypes(training_data, max_iter=150, n_clusters=6, print_every=10, gamma=1.0)
@@ -18,7 +21,10 @@ def main(test: bool = False):
     X_cluster = add_intercept_fn(X_cluster)
     #Logistic regression with cluster data
     theta_w_cluster = logistic_regression(X_cluster, Y_cluster, max_iter=5000, lambda_reg=0.001)
-    
+    train_probs_w_cluster = 1 / (1 + np.exp(-(X_cluster @ theta_w_cluster)))
+    _, train_pred_w_cluster = f1_from_probs(Y_cluster, train_probs_w_cluster, threshold_w_cluster)
+    train_accuracy_w_cluster = accuracy_score(Y_cluster, train_pred_w_cluster)
+    print("Train Accuracy With Cluster Data:", train_accuracy_w_cluster)
     
     if test:
         X_test, Y_test = load_csv('src/data/model_ready/test_processed.csv', label_col='diabetes', add_intercept=True)

@@ -15,28 +15,26 @@ import matplotlib.pyplot as plt
 from util import *
 
 def main(test: bool = False):
+    #Threshold
+    threshold_w_cs = 0.35
+    
     #Load data
     X_original, Y_original = load_csv('src/data/model_ready/train_processed.csv', label_col='diabetes', add_intercept=True)
-    
-    #Regularized without cost-sensitive learning
-    theta_wo_cs = logistic_regression(X_original, Y_original, max_iter=100000, lambda_reg=0.001)
     
     #Regularized with cost-sensitive learning
     original_df = pd.read_csv('src/data/model_ready/train_processed.csv')
     sample_weight = calculate_sample_weight(original_df)
-    theta_w_cs = logistic_regression(X_original, Y_original, max_iter=100000, lambda_reg=0.001, sample_weight=sample_weight)
-    
+    theta_w_cs = logistic_regression(X_original, Y_original, max_iter=5000, lambda_reg=0.001, sample_weight=sample_weight)
+    train_probs_w_cs = 1 / (1 + np.exp(-(X_original @ theta_w_cs)))
+    _, train_pred_w_cs = f1_from_probs(Y_original, train_probs_w_cs, threshold_w_cs)
+    train_accuracy_w_cs = accuracy_score(Y_original, train_pred_w_cs)
+    print("Train Accuracy With Cost Sensitive Learning:", train_accuracy_w_cs)
     
     if test:
         X_test, Y_test = load_csv('src/data/model_ready/test_processed.csv', label_col='diabetes', add_intercept=True)
-        threshold_wo_cs = 0.35
-        threshold_w_cs = 0.35
-        
-        prob_wo_cs = 1 / (1 + np.exp(-(X_test @ theta_wo_cs)))
         
         prob_w_cs = 1 / (1 + np.exp(-(X_test @ theta_w_cs)))
         
-        print_results(Y_test, prob_wo_cs, threshold_wo_cs)
         print_results(Y_test, prob_w_cs, threshold_w_cs)
     
 if __name__ == '__main__':

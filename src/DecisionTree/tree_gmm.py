@@ -15,20 +15,22 @@ from util import *
 import matplotlib.pyplot as plt
 
 def main(test: bool = False):
+    #Threshold
+    threshold_gmm = 0.25
+    
     #Load data and cluster-upsample
     training_data = pd.read_csv('src/data/model_ready/train_processed.csv')
     gmm_data = gmm_cluster_upsample(training_data, max_iter=150, n_components=5)
     X_gmm, Y_gmm = gmm_data.drop(columns=["diabetes"]), gmm_data["diabetes"]
     
     #Decision tree with cluster data
-    model_gmm, train_accuracy_gmm = decision_tree(X_gmm, Y_gmm, max_depth=30, min_samples_split=2, min_samples_leaf=1, sample_weight=None)
+    model_gmm, train_accuracy_gmm = decision_tree(X_gmm, Y_gmm, max_depth=30, min_samples_split=2, min_samples_leaf=1, sample_weight=None, threshold=threshold_gmm)
     print("Train Accuracy With GMM Data:", train_accuracy_gmm)
     
     if test:
         testing_data = pd.read_csv('src/data/model_ready/test_processed.csv')
         X_test, Y_test = testing_data.drop(columns=["diabetes"]), testing_data["diabetes"]
         
-        threshold_gmm = 0.25
         probs_gmm = test_tree(model_gmm, X_test, Y_test)
     
         print_results(Y_test, probs_gmm, threshold_gmm)

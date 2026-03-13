@@ -15,20 +15,21 @@ from util import *
 import matplotlib.pyplot as plt
 
 def main(test: bool = False):
+    #Threshold
+    threshold_cluster = 0.45
     #Load data and cluster-upsample
     training_data = pd.read_csv('src/data/model_ready/train_processed.csv')
     cluster_data = run_k_prototypes(training_data, max_iter=150, n_clusters=5, print_every=10, gamma=1.0)
     X_cluster, Y_cluster = cluster_data.drop(columns=["diabetes"]), cluster_data["diabetes"]
     
     #Decision tree with cluster data
-    model_cluster, train_accuracy_cluster = decision_tree(X_cluster, Y_cluster, max_depth=30, min_samples_split=2, min_samples_leaf=1, sample_weight=None)
+    model_cluster, train_accuracy_cluster = decision_tree(X_cluster, Y_cluster, max_depth=30, min_samples_split=2, min_samples_leaf=1, sample_weight=None, threshold=threshold_cluster)
     print("Train Accuracy With Cluster Data:", train_accuracy_cluster)
     
     if test:
         testing_data = pd.read_csv('src/data/model_ready/test_processed.csv')
         X_test, Y_test = testing_data.drop(columns=["diabetes"]), testing_data["diabetes"]
         
-        threshold_cluster = 0.45
         probs_cluster = test_tree(model_cluster, X_test, Y_test)
     
         print_results(Y_test, probs_cluster, threshold_cluster)

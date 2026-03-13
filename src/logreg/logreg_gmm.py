@@ -13,9 +13,11 @@ sys.path.append(
     os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 )
 from src.gmm import gmm_cluster_upsample
-from util import *
 
 def main(test: bool = False):
+    #Threshold
+    threshold_w_gmm = 0.35
+    
     # Load data
     training_data = pd.read_csv('src/data/model_ready/train_processed.csv')
     gmm_data = gmm_cluster_upsample(training_data, max_iter=150, n_components=2)
@@ -23,11 +25,13 @@ def main(test: bool = False):
     X_gmm = add_intercept_fn(X_gmm)
     #Logistic regression with cluster data
     theta_w_gmm = logistic_regression(X_gmm, Y_gmm, max_iter=5000, lambda_reg=0.0) 
-    
+    train_probs_w_gmm = 1 / (1 + np.exp(-(X_gmm @ theta_w_gmm)))
+    _, train_pred_w_gmm = f1_from_probs(Y_gmm, train_probs_w_gmm, threshold_w_gmm)
+    train_accuracy_w_gmm = accuracy_score(Y_gmm, train_pred_w_gmm)
+    print("Train Accuracy With GMM Data:", train_accuracy_w_gmm)
     
     if test:
         X_test, Y_test = load_csv('src/data/model_ready/test_processed.csv', label_col='diabetes', add_intercept=True)
-        threshold_w_gmm = 0.35
         
         prob_w_gmm = 1 / (1 + np.exp(-(X_test @ theta_w_gmm)))
         

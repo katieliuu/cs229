@@ -15,6 +15,9 @@ import argparse
 import matplotlib.pyplot as plt
 
 def main(test: bool = False):
+    #Threshold
+    threshold_upsampled = 0.25
+    
     #Load data
     training_data = pd.read_csv('src/data/model_ready/train_processed.csv')
     target_count = training_data[training_data["RIDRETH3_3.0"] == 1.0].shape[0]
@@ -26,14 +29,13 @@ def main(test: bool = False):
     X_upsampled, Y_upsampled = upsampled_training.drop(columns=["diabetes"]), upsampled_training["diabetes"]
     
     #Decision tree with upsampled data
-    model_upsampled, train_accuracy_upsampled = decision_tree(X_upsampled, Y_upsampled, max_depth=30, min_samples_split=2, min_samples_leaf=1, sample_weight=None)
+    model_upsampled, train_accuracy_upsampled = decision_tree(X_upsampled, Y_upsampled, max_depth=30, min_samples_split=2, min_samples_leaf=1, sample_weight=None, threshold=threshold_upsampled)
     
     print("Train Accuracy With Upsampled Data:", train_accuracy_upsampled)
     if test:
         testing_data = pd.read_csv('src/data/model_ready/test_processed.csv')
         X_test, Y_test = testing_data.drop(columns=["diabetes"]), testing_data["diabetes"]
         
-        threshold_upsampled = 0.25
         probs_upsampled = test_tree(model_upsampled, X_test, Y_test)
         
         print_results(Y_test, probs_upsampled, threshold_upsampled)

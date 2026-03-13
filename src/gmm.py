@@ -1,7 +1,7 @@
 from sklearn.mixture import GaussianMixture
 import numpy as np
 import pandas as pd
-from kprototypes import naive_upsample_clusters
+from src.kprototypes import naive_upsample_clusters
 
 def gmm_cluster_upsample(training_data, max_iter=150, n_components=3):
     training_data = training_data.copy()
