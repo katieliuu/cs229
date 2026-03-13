@@ -1,15 +1,34 @@
 """
-logistic_regression.py trains a logistic regression model on the dataset.
-The model functions will be imported and used in other scripts that experiment with different hyperparameters or methods.
+This script contains the source code for the logistic regression model. It contains 
+functions used to create logistic regression model and predict probabilities.
 """
 
 import numpy as np
 
 def sigmoid(z):
+    '''
+    This function applies the sigmoid function to the input.
+    Args:
+        z: numpy array, input to the sigmoid function
+    Returns:
+        sigmoid(z): numpy array, output of the sigmoid function
+    '''
     z = np.clip(z, -500, 500)
     return 1.0 / (1.0 + np.exp(-z))
 
 def calc_grad_and_loss(X, Y, theta, lambda_reg=0.0, sample_weight=None):
+    '''
+    This function calculates the gradient and loss of the logistic regression model.
+    Args:
+        X: numpy array, features
+        Y: numpy array, labels
+        theta: numpy array, weights
+        lambda_reg: float, regularization parameter
+        sample_weight: numpy array, sample weights
+    Returns:
+        grad: numpy array, gradient
+        total_loss: float, total loss
+    '''
     epsilon = 1e-6
     count, _ = X.shape
 
@@ -43,6 +62,19 @@ def calc_grad_and_loss(X, Y, theta, lambda_reg=0.0, sample_weight=None):
 
 def logistic_regression(X_train, Y_train, max_iter=5000, lambda_reg=0.0,
                         sample_weight=None, learning_rate=0.01):
+    '''
+    This function trains a logistic regression model on the training data and returns the 
+    model weights.
+    Args:
+        X_train: numpy array, training data features
+        Y_train: numpy array, training labels
+        max_iter: int, max number of iterations
+        lambda_reg: float, regularization parameter
+        sample_weight: numpy array, sample weights
+        learning_rate: float, learning rate
+    Returns:
+        theta: numpy array, model weights
+    '''
     theta = np.zeros(X_train.shape[1], dtype=float)
 
     for i in range(1, max_iter + 1):
@@ -68,31 +100,3 @@ def logistic_regression(X_train, Y_train, max_iter=5000, lambda_reg=0.0,
             break
 
     return theta
-
-'''
-def main():
-    print('==== Training model on data set A ====')
-    X_original, Y_original = util.load_csv('src/data/model_ready/train_processed.csv', label_col='diabetes', add_intercept=True)
-    print("Xa shape:", X_original.shape)
-    print("Ya shape:", Y_original.shape)
-    minority_feature_index = util.return_minority_feature_index('src/data/model_ready/train_processed.csv')
-    
-    
-    #Regularized without cost-sensitive learning
-    final_loss_w_reg_wo_cs = logistic_regression(X_original, Y_original, max_iter=100000, lambda_reg=10)
-    
-    #Regularized with cost-sensitive learning only on minority class
-    final_loss_w_reg_w_cs = logistic_regression(X_original, Y_original, max_iter=100000, lambda_reg=10, penalty_weight=10, minority_feature_index=minority_feature_index)
-    
-    #Regularized with cost-sensitive learning on all classes
-    final_loss_w_reg_w_cs_all = logistic_regression(X_original, Y_original, max_iter=100000, lambda_reg=10, penalty_weight=10, minority_feature_index=None)
-    
-    print(f'Regularized without cost-sensitive learning final loss: {final_loss_w_reg_wo_cs}')
-    print(f'Regularized with cost-sensitive learning final loss: {final_loss_w_reg_w_cs}')
-    print(f'Regularized with cost-sensitive learning on all classes final loss: {final_loss_w_reg_w_cs_all}')
-    
-    
-if __name__ == '__main__':
-    main()
-'''  
-

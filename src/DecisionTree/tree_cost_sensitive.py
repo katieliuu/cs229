@@ -1,11 +1,19 @@
+'''
+This script trains and tests a decision tree model with regularization and cost sensitive
+learning.
+Args:
+    test: bool, whether to test the model
+Returns:
+    None
+To train:
+    python tree_cost_sensitive.py
+To test:
+    python tree_cost_sensitive.py --test
+'''
 import pandas as pd
-from sklearn.model_selection import train_test_split
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.metrics import accuracy_score, classification_report, confusion_matrix, f1_score, ConfusionMatrixDisplay
 from tree_src import *
 from util import *
 import argparse
-import matplotlib.pyplot as plt
 
 def main(test: bool = False):
     #Threshold

@@ -1,3 +1,15 @@
+'''
+This script trains and tests a logistic regression model with K-Prototype clustered 
+and naive upsampled training data.
+Args:
+    test: bool, whether to test the model
+Returns:
+    None
+To train:
+    python logreg_cluster.py
+To test:
+    python logreg_cluster.py --test
+'''
 from util import *
 import numpy as np
 import argparse

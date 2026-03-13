@@ -1,3 +1,14 @@
+'''
+This script trains and tests a logistic regression model with naive upsampled training data.
+Args:
+    test: bool, whether to test the model
+Returns:
+    None
+To train:
+    python logreg_upsample.py
+To test:
+    python logreg_upsample.py --test
+'''
 import numpy as np
 import pandas as pd
 import argparse

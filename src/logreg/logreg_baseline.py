@@ -1,8 +1,19 @@
+'''
+This script trains and tests a logistic regression model with and without regularization
+using L2 regularization on the training dataset.
+Args:
+    test: bool, whether to test the model
+Returns:
+    None
+To train:
+    python logreg_baseline.py
+To test:
+    python logreg_baseline.py --test
+'''
 import numpy as np
 import argparse
 from logreg_src import *
-from sklearn.metrics import accuracy_score, classification_report, confusion_matrix, f1_score, ConfusionMatrixDisplay
-import matplotlib.pyplot as plt
+from sklearn.metrics import accuracy_score
 from util import *
 
 

@@ -1,10 +1,15 @@
 """
-cost_sensitive.py trains a logistic regression model on the dataset with cost-sensitive learning.
-It outputs the final loss of the model without regularization and with regularization.
-Regularization is done using L2 regularization and the factor can be altered in the main function.
-Cost-sensitive learning is done by upweighting the minority class misclassification.
+This script trains and tests a logistic regression model with regularization and 
+cost sensitive learning.
+Args:
+    test: bool, whether to test the model
+Returns:
+    None
+To train:
+    python logreg_cost_sensitive.py
+To test:
+    python logreg_cost_sensitive.py --test
 """
-
 import util
 import numpy as np
 import pandas as pd

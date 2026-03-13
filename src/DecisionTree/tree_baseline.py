@@ -1,7 +1,16 @@
+'''
+This script trains and tests a decision tree model with and without regularization (max depth,
+min samples split, min samples leaf).
+Args:
+    test: bool, whether to test the model
+Returns:
+    None
+To train:
+    python tree_baseline.py
+To test:
+    python tree_baseline.py --test
+'''
 import pandas as pd
-from sklearn.model_selection import train_test_split
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.metrics import accuracy_score, classification_report, confusion_matrix, f1_score, ConfusionMatrixDisplay
 from tree_src import *
 from util import *
 import argparse

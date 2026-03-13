@@ -1,8 +1,17 @@
+'''
+This script trains and tests a decision tree model with GMM clustered and upsampled
+trainingdata.
+Args:
+    test: bool, whether to test the model
+Returns:
+    None
+To train:
+    python tree_gmm.py
+To test:
+    python tree_gmm.py --test
+'''
 import pandas as pd
 import numpy as np
-from sklearn.model_selection import train_test_split
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.metrics import accuracy_score, classification_report, confusion_matrix, f1_score, ConfusionMatrixDisplay
 from tree_src import *
 import sys
 import os
@@ -12,7 +21,6 @@ sys.path.append(
 from src.gmm import gmm_cluster_upsample
 import argparse
 from util import *
-import matplotlib.pyplot as plt
 
 def main(test: bool = False):
     #Threshold

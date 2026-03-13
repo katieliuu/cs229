@@ -4,6 +4,16 @@ import pandas as pd
 from src.kprototypes import naive_upsample_clusters
 
 def gmm_cluster_upsample(training_data, max_iter=150, n_components=3):
+    '''
+    This function performsGMM clustering and upsampling on the training data before
+    training a model.
+    Args:
+        training_data: pandas dataframe, should contain features and label
+        max_iter: int
+        n_components: int, number of clusters to create
+    Returns:
+        train_upsampled: pandas dataframe, should contain features and label
+    '''
     training_data = training_data.copy()
 
     ignore_cols = ["diabetes"]

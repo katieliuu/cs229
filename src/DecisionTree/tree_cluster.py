@@ -1,8 +1,17 @@
+'''
+This script trains and tests a decision tree model with K-Prototype clustered and
+naive upsampled training data.
+Args:
+    test: bool, whether to test the model
+Returns:
+    None
+To train:
+    python tree_cluster.py
+To test:
+    python tree_cluster.py --test
+'''
 import pandas as pd
 import numpy as np
-from sklearn.model_selection import train_test_split
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.metrics import accuracy_score, classification_report, confusion_matrix, f1_score, ConfusionMatrixDisplay
 from tree_src import *
 import sys
 import os
