@@ -19,18 +19,18 @@ def main(test: bool = False):
     X_original, Y_original = load_csv('src/data/model_ready/train_processed.csv', label_col='diabetes', add_intercept=True)
     
     #Regularized without cost-sensitive learning
-    theta_wo_cs = logistic_regression(X_original, Y_original, max_iter=100000, lambda_reg=10) #TODO: add hyperparameter from Charlotte's CV results
+    theta_wo_cs = logistic_regression(X_original, Y_original, max_iter=100000, lambda_reg=0.001)
     
     #Regularized with cost-sensitive learning
     original_df = pd.read_csv('src/data/model_ready/train_processed.csv')
     sample_weight = calculate_sample_weight(original_df)
-    theta_w_cs = logistic_regression(X_original, Y_original, max_iter=100000, lambda_reg=10, sample_weight=sample_weight) #TODO: add hyperparameter from Charlotte's CV results
+    theta_w_cs = logistic_regression(X_original, Y_original, max_iter=100000, lambda_reg=0.001, sample_weight=sample_weight)
     
     
     if test:
         X_test, Y_test = load_csv('src/data/model_ready/test_processed.csv', label_col='diabetes', add_intercept=True)
-        threshold_wo_cs = 0 #TODO
-        threshold_w_cs = 0 #TODO
+        threshold_wo_cs = 0.35
+        threshold_w_cs = 0.35
         
         prob_wo_cs = 1 / (1 + np.exp(-(X_test @ theta_wo_cs)))
         
