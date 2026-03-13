@@ -27,7 +27,7 @@ def main(test: bool = False):
     if test:
         testing_data = pd.read_csv('src/data/model_ready/test_processed.csv')
         X_test, Y_test = testing_data.drop(columns=["diabetes"]), testing_data["diabetes"]
-        output_model_path = 'src/results/DecisionTree'
+        output_model_path = 'src/results/decisiontree'
         probs_wo_reg = test_tree(model_wo_reg, X_test, Y_test)
          
         probs_w_reg = test_tree(model_w_reg, X_test, Y_test)

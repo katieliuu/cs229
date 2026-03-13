@@ -29,7 +29,7 @@ def main(test: bool = False):
     if test:
         testing_data = pd.read_csv('src/data/model_ready/test_processed.csv')
         X_test, Y_test = testing_data.drop(columns=["diabetes"]), testing_data["diabetes"]
-        output_model_path = 'src/results/DecisionTree'
+        output_model_path = 'src/results/decisiontree'
         probs_cluster = test_tree(model_cluster, X_test, Y_test)
         evaluate_by_ethnicity(X_test, Y_test, probs_cluster, threshold_cluster, output_model_path=output_model_path, experiment_type='cluster')
     
