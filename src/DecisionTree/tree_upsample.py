@@ -17,7 +17,10 @@ import matplotlib.pyplot as plt
 def main(test: bool = False):
     #Load data
     training_data = pd.read_csv('src/data/model_ready/train_processed.csv')
-    kappa_1, kappa_4, kappa_6 = get_natural_kappas(training_data)
+    target_count = training_data[training_data["RIDRETH3_3.0"] == 1.0].shape[0]
+    kappa_1 = len(training_data[training_data["RIDRETH3_1.0"] == 1.0]) / target_count
+    kappa_4 = len(training_data[training_data["RIDRETH3_4.0"] == 1.0]) / target_count
+    kappa_6 = len(training_data[training_data["RIDRETH3_6.0"] == 1.0]) / target_count
     kappa_mult_1, kappa_mult_4, kappa_mult_6 = 1.5, 1.0, 1.0
     upsampled_training = naive_upsample(training_data, kappa_mult_1 * kappa_1, kappa_mult_4 * kappa_4, kappa_mult_6 * kappa_6)
     X_upsampled, Y_upsampled = upsampled_training.drop(columns=["diabetes"]), upsampled_training["diabetes"]
