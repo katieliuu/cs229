@@ -10,7 +10,7 @@ from kprototypes import run_k_prototypes
 from gmm import gmm_cluster_upsample
 from itertools import product
 import json
-from neuralnetwork import nn_train, forward_prop, backward_prop, get_initial_params, one_hot_labels
+from src.nn.neuralnetwork import nn_train, forward_prop, backward_prop, get_initial_params, one_hot_labels
 from joblib import Parallel, delayed
 
 # identify numeric vs. cat cols
