@@ -56,7 +56,7 @@ def print_results(y_test, y_probs, threshold, output_model_path: str=None, exper
         writer = csv.DictWriter(f, fieldnames=metrics.keys())
         writer.writeheader()
         writer.writerow(metrics)
-        print(f"Metrics saved to {file_path}")
+        print(f"Metrics saved to {csv_file_path}")
         
     
 
