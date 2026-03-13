@@ -1,3 +1,15 @@
+"""
+cv_decisiontree does nested stratified cross-validation on the training
+data to tune and select hyperparameters for the Decision Tree experiments.
+The inner cross-validation is 3-fold and selects the best performing hyperparameters
+according to F1 score. The outer cross-validation is 5-fold and provides an 
+estimate of the model's performance using those best hyperparameters fitted on
+the outer training fold. Results (hyperparameters selected and F1 score achieved) are
+saved to JSON files.
+AI Use: GPT-5 was used as a collaborator for conceptual understanding of the steps involved in
+nesed cross-validation, and to ensure no data leakage occured. It was also used for help with
+how to save the parameters and metrics to a JSON file.
+"""
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import StratifiedKFold
@@ -16,6 +28,7 @@ import json
 numeric_cols = ["RIDAGEYR", "LBXTC", "LBDHDD", "LBXSTR", "LBXSCR", "LBXHSCRP", "DBP_mean", "SBP_mean", "BMXBMI", "BMXHIP", "SMQ020"]
 cat_cols = ["DMDEDUC2", "RIDRETH3", "RIAGENDR"]
 
+# the same preprocessing functions from 05_process_before_test
 def preprocess_fit_transform(X_train):
     mice = IterativeImputer(random_state=3, max_iter=20)
     scaler = StandardScaler()
@@ -28,6 +41,7 @@ def preprocess_fit_transform(X_train):
 
     return X_train_processed, mice, scaler, encoder
 
+# the same preprocessing functions from 05_process_before_test
 def preprocess_transform(X_val, mice, scaler, encoder):
     X_numeric = pd.DataFrame(mice.transform(X_val[numeric_cols]), columns=numeric_cols, index=X_val.index)
     X_scaled = pd.DataFrame(scaler.transform(X_numeric), columns=numeric_cols, index=X_val.index)
@@ -35,6 +49,7 @@ def preprocess_transform(X_val, mice, scaler, encoder):
 
     return pd.concat([X_scaled, X_cat], axis=1)
 
+# define function to calculate F1 score from the model's predicted probablities and true y values
 def f1_from_probs(y_true, probs, threshold):
     y_true = np.asarray(y_true)
     preds = (probs >= threshold).astype(int)
@@ -68,6 +83,7 @@ def cv_tune_pipeline_dt(experiment_type = "baseline", n_splits = 5, inner_splits
     y = df["diabetes"].astype(int)
     X = df.drop(columns=["diabetes"])
 
+    # specify grid of parameters to search through
     max_depth_grid = [5, 10, 15, 20, 25, 30]
     min_samples_split_grid = [2, 5, 10, 20]
     min_samples_leaf_grid = [1, 2, 5, 10]
@@ -88,11 +104,12 @@ def cv_tune_pipeline_dt(experiment_type = "baseline", n_splits = 5, inner_splits
         X_val_f = X.iloc[val_idx]
         y_val_f = y.iloc[val_idx]
 
-        # compute natural kappas for upsampling
+        # compute natural kappas for upsampling experiment
         nat_kap_1, nat_kap_4, nat_kap_6 = get_natural_kappas(X_train_f)
+        # kappa multiplier grid for upsampling experiment
         kappa_mult_grid = [1.0, 1.5]
 
-    # define param grids
+    # define parameter grids (list(product() creates all possible combinations of the specified hyperparameters)
         if experiment_type == "baseline":
             param_grid = list(product(max_depth_grid, min_samples_split_grid, min_samples_leaf_grid, threshold_grid))
         elif experiment_type == "upsample":
@@ -104,14 +121,14 @@ def cv_tune_pipeline_dt(experiment_type = "baseline", n_splits = 5, inner_splits
         elif experiment_type == "gmm":
             param_grid = list(product(max_depth_grid, min_samples_split_grid, min_samples_leaf_grid, threshold_grid, n_comps_grid))
 
+    # define stratified folds to keep consistent diabetes prevalence across folds
         skf_inner = StratifiedKFold(n_splits=inner_splits, shuffle=True, random_state=random_state)
         score_star = -np.inf
+        # will be updated with best parameters during cv
         params_star = None
 
-        #print(f"param_grid is {param_grid}")
         # loop through all possible hyperparam combinations, do inner 3-fold cv on them
         for params in param_grid:
-            #print(f"param is {params}")
             scores_inner = []
             for (train_idx_inner, val_idx_inner) in skf_inner.split(X_train_f, y_train_f):
                 X_train_f_inner = X_train_f.iloc[train_idx_inner]
@@ -119,7 +136,7 @@ def cv_tune_pipeline_dt(experiment_type = "baseline", n_splits = 5, inner_splits
                 X_val_f_inner = X_train_f.iloc[val_idx_inner]
                 y_val_f_inner = y_train_f.iloc[val_idx_inner]
 
-                # experiment-specific params
+                # experiment-specific params; if experiment doesn't use that param, set it to None
                 if experiment_type == "baseline":
                     max_depth, min_samples_split, min_samples_leaf, threshold = params
                     gamma = None
@@ -175,36 +192,40 @@ def cv_tune_pipeline_dt(experiment_type = "baseline", n_splits = 5, inner_splits
                     kappa_mult_4 = None
                     kappa_mult_6 = None
 
+                # apply preprocessing pipeline to inner train fold
                 X_train_inner_preprocessed, mice, scaler, encoder = preprocess_fit_transform(X_train_f_inner)
                 X_val_inner_preprocessed = preprocess_transform(X_val_f_inner, mice, scaler, encoder)
 
-                # manipulate fold for specific experiment
+                # manipulate fold for specific experiment:
+                # upsampling
                 if experiment_type == "upsample":
                     train_set_inner = pd.concat([X_train_inner_preprocessed, y_train_f_inner.rename("diabetes")], axis=1)
                     train_set_inner = naive_upsample(train_set_inner, kappa_1=kappa_1, kappa_4=kappa_4, kappa_6=kappa_6)
                     y_train_f_inner = train_set_inner["diabetes"]
                     X_train_inner_preprocessed = train_set_inner.drop(columns=["diabetes"])
                 
+                # clustering
                 elif experiment_type == "cluster":
-                    # clustering code. do this before one hot encoding, after scaling/imputation?
                     train_set_inner = pd.concat([X_train_inner_preprocessed, y_train_f_inner.rename("diabetes")], axis=1)
                     train_set_inner = run_k_prototypes(train_set_inner, gamma = gamma, n_clusters = n_clusters)
                     y_train_f_inner = train_set_inner["diabetes"]
                     X_train_inner_preprocessed = train_set_inner.drop(columns=["diabetes"])
 
+                # cost-sensitive
                 elif experiment_type == "cost_sensitive":
                     train_set_inner = pd.concat([X_train_inner_preprocessed, y_train_f_inner.rename("diabetes")], axis=1)
                     sample_weight = calculate_sample_weight(train_set_inner)
                     y_train_f_inner = train_set_inner["diabetes"]
                     X_train_inner_preprocessed = train_set_inner.drop(columns=["diabetes"])
                 
+                # gmm
                 elif experiment_type == "gmm":
                     train_set_inner = pd.concat([X_train_inner_preprocessed, y_train_f_inner.rename("diabetes")], axis=1)
                     train_set_inner = gmm_cluster_upsample(train_set_inner, n_components=n_comps)
                     y_train_f_inner = train_set_inner["diabetes"]
                     X_train_inner_preprocessed = train_set_inner.drop(columns=["diabetes"])
 
-                # inner model fit ADD GMM
+                # inner decision tree fit
                 if experiment_type in ["baseline", "upsample", "cluster", "gmm"]:
                     tree = DecisionTreeClassifier(max_depth=max_depth, min_samples_split=min_samples_split,
                                                   min_samples_leaf=min_samples_leaf, random_state=random_state)
@@ -216,7 +237,7 @@ def cv_tune_pipeline_dt(experiment_type = "baseline", n_splits = 5, inner_splits
                                                   min_samples_leaf=min_samples_leaf, random_state=random_state)
                     tree.fit(X_train_inner_preprocessed, y_train_f_inner, sample_weight=sample_weight)
                     
-                # prediction and score for inner loop
+                # prediction and F1 score for inner loop
                 probs = tree.predict_proba(X_val_inner_preprocessed)[:, 1]
                 scores_inner.append(f1_from_probs(y_val_f_inner, probs, threshold))
 
@@ -226,9 +247,8 @@ def cv_tune_pipeline_dt(experiment_type = "baseline", n_splits = 5, inner_splits
                 score_star = mean_inner
                 params_star = params
 
-        #print(f"params_star = {params_star}")
         # now that we have the best parameters, refit the model on outer train fold with those params
-        # experiment-specific params: ADD GMM params
+        # experiment-specific parameters
         if experiment_type == "baseline":
             max_depth, min_samples_split, min_samples_leaf, threshold = params_star
             gamma = None
@@ -284,9 +304,9 @@ def cv_tune_pipeline_dt(experiment_type = "baseline", n_splits = 5, inner_splits
             kappa_mult_4 = None
             kappa_mult_6 = None
 
-        # fit imputer, scaler, encoder to train folds
+        # fit imputer, scaler, encoder to outer train folds
         X_train_preprocessed, mice, scaler, encoder = preprocess_fit_transform(X_train_f)
-        # apply to validation fold
+        # apply to outer validation fold
         X_val_preprocessed = preprocess_transform(X_val_f, mice, scaler, encoder)
 
         # experiment-specific logic
@@ -314,6 +334,7 @@ def cv_tune_pipeline_dt(experiment_type = "baseline", n_splits = 5, inner_splits
             y_train_f = train_set["diabetes"]
             X_train_preprocessed = train_set.drop(columns=["diabetes"])
 
+        # fit decision tree on outer fold
         if experiment_type in ["baseline", "upsample", "cluster", "gmm"]:
             tree = DecisionTreeClassifier(max_depth=max_depth, min_samples_split=min_samples_split,
                                         min_samples_leaf=min_samples_leaf, random_state=random_state)
@@ -348,7 +369,8 @@ def cv_tune_pipeline_dt(experiment_type = "baseline", n_splits = 5, inner_splits
                         "natural_kappa_4": nat_kap_4,
                         "natural_kappa_6": nat_kap_6,})
         #"sample_weight": sample_weight,
-        
+    
+    # convert the metrics to a pd df
     fold_metrics = pd.DataFrame(metrics)
 
     return {
@@ -357,6 +379,7 @@ def cv_tune_pipeline_dt(experiment_type = "baseline", n_splits = 5, inner_splits
         "summary" : {"f1_mean": fold_metrics["f1"].mean(),
                      "f1_std": fold_metrics["f1"].std()}}
 
+# run decision tree cv for each experiment type and save the results as a JSON
 def main():
     baseline_metrics_dict = cv_tune_pipeline_dt()
     baseline_metrics_dict["fold_metrics"] = baseline_metrics_dict["fold_metrics"].to_dict(orient="records")
