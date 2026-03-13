@@ -10,6 +10,7 @@ from sklearn.model_selection import train_test_split
 # load preprocessed dataset (pre-imputation, scaling, OHE)
 df = pd.read_csv("src/data/analysis_ready/nhanes_diabetes_base.csv", na_values=["."])
 
+# create X and y
 patient_id = df["SEQN"]
 X = df.drop(columns=["diabetes", "SEQN"])
 y = df["diabetes"].astype(int)

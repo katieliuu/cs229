@@ -14,6 +14,7 @@ from pathlib import Path
 data_dir = Path('src/data/raw_xpt')
 data_dir.mkdir(parents=True, exist_ok=True)
 
+# specify links to datasets to scrape
 nhanes_urls = ["https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2017/DataFiles/DEMO_J.xpt",
 "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2017/DataFiles/BPX_J.xpt",
 "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2017/DataFiles/GHB_J.xpt",
@@ -29,8 +30,9 @@ nhanes_urls = ["https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2017/DataFiles/DEMO
 "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2017/DataFiles/SMQ_J.xpt",
 "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2017/DataFiles/BMX_J.xpt"]
 
+# download the dataset at each url
 def download(url):
-    out = data_dir / url.split("/")[-1] # keep only the filename, like BMX_J.xpt
+    out = data_dir / url.split("/")[-1] # keep only the filename (like BMX_J.xpt)
     with requests.get(url, stream=True) as r:
         with open(out, "wb") as f:
             for chunk in r.iter_content(chunk_size=128):
