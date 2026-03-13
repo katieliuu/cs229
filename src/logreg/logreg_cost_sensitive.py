@@ -38,7 +38,6 @@ def main(test: bool = False):
         prob_w_cs = 1 / (1 + np.exp(-(X_test @ theta_w_cs)))
         
         evaluate_by_ethnicity(X_test_df, Y_test_df, prob_w_cs, threshold_w_cs, output_model_path=output_model_path, experiment_type='cost_sensitive')
-        import pdb; pdb.set_trace()
     
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Test or Train")
