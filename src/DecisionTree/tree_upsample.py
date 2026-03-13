@@ -23,7 +23,7 @@ def main(test: bool = False):
     X_upsampled, Y_upsampled = upsampled_training.drop(columns=["diabetes"]), upsampled_training["diabetes"]
     
     #Decision tree with upsampled data
-    model_upsampled, train_accuracy_upsampled = decision_tree(X_upsampled, Y_upsampled, max_depth=None, min_samples_split=2, min_samples_leaf=1, sample_weight=None)
+    model_upsampled, train_accuracy_upsampled = decision_tree(X_upsampled, Y_upsampled, max_depth=30, min_samples_split=2, min_samples_leaf=1, sample_weight=None)
     
     print("Train Accuracy With Upsampled Data:", train_accuracy_upsampled)
     if test:

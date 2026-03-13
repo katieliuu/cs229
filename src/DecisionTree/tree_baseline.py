@@ -15,7 +15,7 @@ def main(test: bool = False):
     model_wo_reg, train_accuracy_wo_reg = decision_tree(X_original, Y_original)
     
     #Baseline with regularization (max depth, min samples split, min samples leaf)
-    model_w_reg, train_accuracy_w_reg = decision_tree(X_original, Y_original, max_depth=None, min_samples_split=2, min_samples_leaf=1)
+    model_w_reg, train_accuracy_w_reg = decision_tree(X_original, Y_original, max_depth=25, min_samples_split=2, min_samples_leaf=1)
 
     print("Train Accuracy Without Regularization:", train_accuracy_wo_reg)
     print("Train Accuracy With Regularization:", train_accuracy_w_reg)
@@ -24,7 +24,7 @@ def main(test: bool = False):
         testing_data = pd.read_csv('src/data/model_ready/test_processed.csv')
         X_test, Y_test = testing_data.drop(columns=["diabetes"]), testing_data["diabetes"]
         
-        threshold_wo_reg = 0.5 
+        threshold_wo_reg = 0.5
         probs_wo_reg = test_tree(model_wo_reg, X_test, Y_test)
         
         threshold_w_reg = 0.25 

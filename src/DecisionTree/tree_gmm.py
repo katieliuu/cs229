@@ -9,7 +9,7 @@ import os
 sys.path.append(
     os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 )
-from src.kprototypes import run_k_prototypes
+from src.gmm import gmm_cluster_upsample
 import argparse
 from util import *
 import matplotlib.pyplot as plt
@@ -17,21 +17,21 @@ import matplotlib.pyplot as plt
 def main(test: bool = False):
     #Load data and cluster-upsample
     training_data = pd.read_csv('src/data/model_ready/train_processed.csv')
-    cluster_data = run_k_prototypes(training_data, max_iter=150, n_clusters=5, print_every=10, gamma=1.0)
-    X_cluster, Y_cluster = cluster_data.drop(columns=["diabetes"]), cluster_data["diabetes"]
+    gmm_data = gmm_cluster_upsample(training_data, max_iter=150, n_components=5)
+    X_gmm, Y_gmm = gmm_data.drop(columns=["diabetes"]), gmm_data["diabetes"]
     
     #Decision tree with cluster data
-    model_cluster, train_accuracy_cluster = decision_tree(X_cluster, Y_cluster, max_depth=30, min_samples_split=2, min_samples_leaf=1, sample_weight=None)
-    print("Train Accuracy With Cluster Data:", train_accuracy_cluster)
+    model_gmm, train_accuracy_gmm = decision_tree(X_gmm, Y_gmm, max_depth=30, min_samples_split=2, min_samples_leaf=1, sample_weight=None)
+    print("Train Accuracy With GMM Data:", train_accuracy_gmm)
     
     if test:
         testing_data = pd.read_csv('src/data/model_ready/test_processed.csv')
         X_test, Y_test = testing_data.drop(columns=["diabetes"]), testing_data["diabetes"]
         
-        threshold_cluster = 0.45
-        probs_cluster = test_tree(model_cluster, X_test, Y_test)
+        threshold_gmm = 0.25
+        probs_gmm = test_tree(model_gmm, X_test, Y_test)
     
-        print_results(Y_test, probs_cluster, threshold_cluster)
+        print_results(Y_test, probs_gmm, threshold_gmm)
     
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Test or Train")
@@ -39,5 +39,3 @@ if __name__ == '__main__':
     args = parser.parse_args()
     
     main(test = args.test)
-    
-    

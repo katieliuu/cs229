@@ -1,8 +1,3 @@
-"""
-baseline.py trains a logistic regression model on the baseline dataset.
-It outputs the final loss and weights of the model without regularization and with regularization.
-Regularization is done using L2 regularization and the factor can be altered in the main function.
-"""
 from util import *
 import numpy as np
 import argparse
