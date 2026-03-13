@@ -32,10 +32,13 @@ def main(test: bool = False):
     
     if test:
         X_test, Y_test = load_csv('src/data/model_ready/test_processed.csv', label_col='diabetes', add_intercept=True)
-        
+        test_data_df = pd.read_csv('src/data/model_ready/test_processed.csv')
+        X_test_df, Y_test_df = test_data_df.drop(columns=["diabetes"]), test_data_df["diabetes"]
+        output_model_path = 'src/results/logreg'
         prob_w_cs = 1 / (1 + np.exp(-(X_test @ theta_w_cs)))
         
-        print_results(Y_test, prob_w_cs, threshold_w_cs)
+        evaluate_by_ethnicity(X_test_df, Y_test_df, prob_w_cs, threshold_w_cs, output_model_path=output_model_path, experiment_type='cost_sensitive')
+        import pdb; pdb.set_trace()
     
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Test or Train")
@@ -44,8 +47,5 @@ if __name__ == '__main__':
     
     main(test = args.test)
     
-    
-if __name__ == '__main__':
-    main()
     
 

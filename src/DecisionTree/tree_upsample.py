@@ -35,10 +35,10 @@ def main(test: bool = False):
     if test:
         testing_data = pd.read_csv('src/data/model_ready/test_processed.csv')
         X_test, Y_test = testing_data.drop(columns=["diabetes"]), testing_data["diabetes"]
-        
+        output_model_path = 'src/results/DecisionTree'
         probs_upsampled = test_tree(model_upsampled, X_test, Y_test)
         
-        print_results(Y_test, probs_upsampled, threshold_upsampled)
+        evaluate_by_ethnicity(X_test, Y_test, probs_upsampled, threshold_upsampled, output_model_path=output_model_path, experiment_type='upsample')
         
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Test or Train")

@@ -27,13 +27,13 @@ def main(test: bool = False):
     if test:
         testing_data = pd.read_csv('src/data/model_ready/test_processed.csv')
         X_test, Y_test = testing_data.drop(columns=["diabetes"]), testing_data["diabetes"]
-        
+        output_model_path = 'src/results/DecisionTree'
         probs_wo_reg = test_tree(model_wo_reg, X_test, Y_test)
          
         probs_w_reg = test_tree(model_w_reg, X_test, Y_test)
         
-        print_results(Y_test, probs_w_reg, threshold_w_reg)
-        print_results(Y_test, probs_wo_reg, threshold_wo_reg)
+        evaluate_by_ethnicity(X_test, Y_test, probs_w_reg, threshold_w_reg, output_model_path=output_model_path, experiment_type='baseline_w_reg')
+        evaluate_by_ethnicity(X_test, Y_test, probs_wo_reg, threshold_wo_reg, output_model_path=output_model_path, experiment_type='baseline_wo_reg')
     
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Test or Train")
