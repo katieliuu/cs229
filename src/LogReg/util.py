@@ -3,23 +3,35 @@ import matplotlib.pyplot as plt
 import numpy as np
 import json
 import pandas as pd
-from sklearn.metrics import accuracy_score, confusion_matrix, ConfusionMatrixDisplay, precision_recall_curve
+import os
+from sklearn.metrics import accuracy_score, confusion_matrix, ConfusionMatrixDisplay, precision_recall_curve, auc
 
-def print_results(y_test, y_probs, threshold):
+def print_results(y_test, y_probs, threshold, output_model_path: str=None, experiment_type: str=None):
+    '''
+    Args:
+        y_test: True labels
+        y_probs: Predicted probabilities
+        threshold: Threshold for classification
+        output_model_path: Path to save the model(should be ../results/logreg/ or ../results/decision_tree/ or ../results/gmm/ or ../results/cost_sensitive/)
+        experiment_type: Type of experiment(should be baseline, upsample, cluster, gmm, cost_sensitive)
+    '''
+    
     print("First 50 probabilities:", y_probs[0:49])
     #f1 score
     f1, y_pred = f1_from_probs(y_test, y_probs, threshold)
     print(f'F1 Score: {f1}')
     
-    #Confusion Matrix
-    cm = confusion_matrix(y_test, y_pred)#, labels=['Diabetic', 'Non-Diabetic'])
-    disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=['Diabetic', 'Non-Diabetic'])
-    disp.plot()
-    plt.show()
-    
     #Accuracy
     accuracy = accuracy_score(y_test, y_pred)
     print(f'Accuracy: {accuracy}')
+    
+    #Confusion Matrix
+    cm = confusion_matrix(y_test, y_pred)#, labels=['Diabetic', 'Non-Diabetic'])
+    disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=['Diabetic', 'Non-Diabetic'])
+    # disp.plot()
+    # plt.show()
+    confusion_matrix_path = os.path.join(output_model_path, f"{experiment_type}_confusion_matrix.png")
+    disp.figure_.savefig(confusion_matrix_path, dpi=300, bbox_inches='tight')
     
     #Precision-Recall Curve
     precision, recall, thresholds = precision_recall_curve(y_test, y_probs)
@@ -29,7 +41,24 @@ def print_results(y_test, y_probs, threshold):
     plt.xlabel('Recall')
     plt.ylabel('Precision')
     plt.title('Precision-Recall Curve with Thresholds')
-    plt.show()
+    precision_recall_curve_path = os.path.join(output_model_path, f"{experiment_type}_precision_recall_curve.png")
+    plt.savefig(precision_recall_curve_path, dpi=300, bbox_inches='tight')
+    
+    metrics = {
+    "accuracy": accuracy,
+    "precision": precision,
+    "recall": recall,
+    "f1": f1,
+    }
+
+    csv_file_path = os.path.join(output_model_path, f"{experiment_type}_metrics.csv")
+    with open(csv_file_path, "w", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=metrics.keys())
+        writer.writeheader()
+        writer.writerow(metrics)
+        print(f"Metrics saved to {file_path}")
+        
+    
 
 
 def f1_from_probs(y_true, probs, threshold):
