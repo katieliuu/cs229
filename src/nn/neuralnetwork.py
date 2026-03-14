@@ -1,3 +1,10 @@
+"""
+neuralnetwork.py implements a two-class neural network from scratch using numpy, including
+forward propagation, backpropagation, and mini-batch gradient descent.
+Supports sigmoid and ReLU activations, inverted dropout, L2 regularization,
+and sample-weighted loss for cost-sensitive learning.
+"""
+
 import numpy as np
 import matplotlib.pyplot as plt
 

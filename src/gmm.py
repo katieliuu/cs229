@@ -1,3 +1,9 @@
+"""
+gmm.py implements GMM-based clustering and upsampling for training data.
+Fits a Gaussian Mixture Model to assign soft cluster labels, then
+upsamples minority clusters to match the largest cluster size.
+"""
+
 from sklearn.mixture import GaussianMixture
 import numpy as np
 import pandas as pd

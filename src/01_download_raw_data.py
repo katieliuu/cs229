@@ -5,8 +5,8 @@ The requests module is then used to store the content of each of
 those xpt files into src/data/raw_xpt folder. Information on how to
 use the requests module was obtained from the module's documentation,
 https://requests.readthedocs.io/en/latest/user/quickstart/.
-
 """
+
 import requests
 from pathlib import Path
 

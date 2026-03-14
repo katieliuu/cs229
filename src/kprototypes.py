@@ -1,3 +1,12 @@
+"""
+kprototypes.py implements K-Prototypes clustering from scratch for mixed-type data
+(continuous + categorical features). Uses Euclidean distance for
+continuous features and Hamming distance for categorical features,
+combined via a gamma scaling parameter. After clustering, minority clusters are 
+upsampled via naive duplication to match the size of the largest cluster, and the 
+resulting dataset is returned for use in downstream classification.
+"""
+
 import pandas as pd
 import numpy as np
 import argparse
