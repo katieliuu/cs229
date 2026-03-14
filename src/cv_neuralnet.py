@@ -1,3 +1,15 @@
+"""
+cv_neuralnet does nested stratified cross-validation on the training
+data to tune and select hyperparameters for the Neural Network experiments.
+The inner cross-validation is 3-fold and selects the best performing hyperparameters
+according to F1 score. The outer cross-validation is 5-fold and provides an 
+estimate of the model's performance using those best hyperparameters fitted on
+the outer training fold. Results (hyperparameters selected and F1 score achieved) are
+saved to JSON files.
+AI Use: GPT-5 was used as a collaborator for conceptual understanding of the steps involved in
+nesed cross-validation, and to ensure no data leakage occured. It was also used for help with
+how to save the parameters and metrics to a JSON file.
+"""
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import StratifiedKFold
@@ -17,6 +29,7 @@ from joblib import Parallel, delayed
 numeric_cols = ["RIDAGEYR", "LBXTC", "LBDHDD", "LBXSTR", "LBXSCR", "LBXHSCRP", "DBP_mean", "SBP_mean", "BMXBMI", "BMXHIP", "SMQ020"]
 cat_cols = ["DMDEDUC2", "RIDRETH3", "RIAGENDR"]
 
+# the same preprocessing functions from 05_process_before_test
 def preprocess_fit_transform(X_train):
     mice = IterativeImputer(random_state=3, max_iter=20)
     scaler = StandardScaler()
@@ -29,6 +42,7 @@ def preprocess_fit_transform(X_train):
 
     return X_train_processed, mice, scaler, encoder
 
+# the same preprocessing functions from 05_process_before_test
 def preprocess_transform(X_val, mice, scaler, encoder):
     X_numeric = pd.DataFrame(mice.transform(X_val[numeric_cols]), columns=numeric_cols, index=X_val.index)
     X_scaled = pd.DataFrame(scaler.transform(X_numeric), columns=numeric_cols, index=X_val.index)
@@ -36,6 +50,7 @@ def preprocess_transform(X_val, mice, scaler, encoder):
 
     return pd.concat([X_scaled, X_cat], axis=1)
 
+# define function to calculate F1 score from the model's predicted probablities and true y values
 def f1_from_probs(y_true, probs, threshold):
     y_true = np.asarray(y_true)
     probs = np.asarray(probs)
@@ -64,6 +79,7 @@ def f1_from_probs(y_true, probs, threshold):
         f1 = 2 * precision * recall / (precision + recall)
     return f1
 
+# define function to fit an MLP using NumPy
 def fit_numpy_mlp(X_train, y_train, X_dev, y_dev, hidden_width, lr, batch_size, activation, dropout, weight_decay, num_epochs, sample_weights):
     y_train_oh = one_hot_labels(y_train.to_numpy(), num_classes=2)
     y_dev_oh = one_hot_labels(y_dev.to_numpy(), num_classes=2)
@@ -88,6 +104,7 @@ def fit_numpy_mlp(X_train, y_train, X_dev, y_dev, hidden_width, lr, batch_size, 
     )
     return params
 
+# define function to obtain class probabilities from NumPy MLP
 def predict_probs_numpy_mlp(X, params, activation):
     dummy_labels = np.zeros((X.shape[0], 2))
     _, output, _ = forward_prop(
@@ -95,9 +112,11 @@ def predict_probs_numpy_mlp(X, params, activation):
         is_training=False, activation=activation, dropout_rate=0.0)
     return output[:, 1]
 
+# encapsulate cv code into its own function
 def _eval_params_inner(params, X_train_f, y_train_f, experiment_type, nat_kap_1, nat_kap_4, nat_kap_6, inner_splits, random_state):
     # evaluate a single hyperparameter combo via inner CV; returns (mean_f1, params)
     scores_inner = []
+    # define stratified folds to keep consistent diabetes prevalence across folds
     skf_inner = StratifiedKFold(n_splits=inner_splits, shuffle=True, random_state=random_state)
 
     # experiment-specific params
@@ -162,16 +181,19 @@ def _eval_params_inner(params, X_train_f, y_train_f, experiment_type, nat_kap_1,
         X_val_f_inner = X_train_f.iloc[val_idx_inner]
         y_val_f_inner = y_train_f.iloc[val_idx_inner]
 
+        # apply preprocessing pipeline to inner train fold
         X_train_inner_preprocessed, mice, scaler, encoder = preprocess_fit_transform(X_train_f_inner)
         X_val_inner_preprocessed = preprocess_transform(X_val_f_inner, mice, scaler, encoder)
 
         # manipulate fold for specific experiment
+        # upsampling
         if experiment_type == "upsample":
             train_set_inner = pd.concat([X_train_inner_preprocessed, y_train_f_inner.rename("diabetes")], axis=1)
             train_set_inner = naive_upsample(train_set_inner, kappa_1=kappa_1, kappa_4=kappa_4, kappa_6=kappa_6)
             y_train_f_inner = train_set_inner["diabetes"]
             X_train_inner_preprocessed = train_set_inner.drop(columns=["diabetes"])
         
+        # clustering
         elif experiment_type == "cluster":
             # clustering code. do this before one hot encoding, after scaling/imputation?
             train_set_inner = pd.concat([X_train_inner_preprocessed, y_train_f_inner.rename("diabetes")], axis=1)
@@ -179,18 +201,21 @@ def _eval_params_inner(params, X_train_f, y_train_f, experiment_type, nat_kap_1,
             y_train_f_inner = train_set_inner["diabetes"]
             X_train_inner_preprocessed = train_set_inner.drop(columns=["diabetes"])
 
+        # cost-sensitive
         elif experiment_type == "cost_sensitive":
             train_set_inner = pd.concat([X_train_inner_preprocessed, y_train_f_inner.rename("diabetes")], axis=1)
             sample_weight = calculate_sample_weight(train_set_inner)
             y_train_f_inner = train_set_inner["diabetes"]
             X_train_inner_preprocessed = train_set_inner.drop(columns=["diabetes"])
         
+        # gmm
         elif experiment_type == "gmm":
             train_set_inner = pd.concat([X_train_inner_preprocessed, y_train_f_inner.rename("diabetes")], axis=1)
             train_set_inner = gmm_cluster_upsample(train_set_inner, n_components=n_comps)
             y_train_f_inner = train_set_inner["diabetes"]
             X_train_inner_preprocessed = train_set_inner.drop(columns=["diabetes"])
 
+        # fit NumPy MLP using specific hyperparameter combination
         params_nn = fit_numpy_mlp(
             X_train=X_train_inner_preprocessed,
             y_train=y_train_f_inner,
@@ -206,6 +231,7 @@ def _eval_params_inner(params, X_train_f, y_train_f, experiment_type, nat_kap_1,
             sample_weights=sample_weight
         )
         
+        # predict class probabilities
         probs = predict_probs_numpy_mlp(
             X_val_inner_preprocessed, params_nn, activation=activation)
         
@@ -221,6 +247,7 @@ def cv_tune_pipeline_nn(experiment_type = "baseline", n_splits = 5, inner_splits
     y = df["diabetes"].astype(int)
     X = df.drop(columns=["diabetes"])
 
+    # specify grid of parameters to search through
     lr_grid = [0.01, 0.03, 0.05]
     hidden_width_grid = [16, 32, 64]
     weight_decay_grid = [0.0, 1e-4, 1e-3]
@@ -246,9 +273,10 @@ def cv_tune_pipeline_nn(experiment_type = "baseline", n_splits = 5, inner_splits
         y_val_f = y.iloc[val_idx]
         # compute natural kappas for upsampling
         nat_kap_1, nat_kap_4, nat_kap_6 = get_natural_kappas(X_train_f)
+        # kappa multiplier grid for upsampling experiment
         kappa_mult_grid = [1.0, 1.5]
 
-         # define parameter grids
+        # define parameter grids (list(product() creates all possible combinations of the specified hyperparameters)
         if experiment_type == "baseline":
             param_grid = list(product(lr_grid, hidden_width_grid, weight_decay_grid, dropout_grid, batch_size_grid, activation_grid, num_epochs_grid, threshold_grid))
         elif experiment_type == "upsample":
@@ -263,8 +291,7 @@ def cv_tune_pipeline_nn(experiment_type = "baseline", n_splits = 5, inner_splits
         score_star = -np.inf
         params_star = None
 
-        #print(f"param_grid is {param_grid}")
-        # loop through all possible hyperparam combinations, do inner 3-fold cv on them
+        # loop through all possible hyperparam combinations, do inner 3-fold cv on them. Run in parallel.
         results = Parallel(n_jobs=-1)(
             delayed(_eval_params_inner)(params, X_train_f, y_train_f, experiment_type, nat_kap_1, nat_kap_4, nat_kap_6, inner_splits, random_state)
             for params in param_grid
@@ -276,7 +303,6 @@ def cv_tune_pipeline_nn(experiment_type = "baseline", n_splits = 5, inner_splits
                 score_star = mean_inner
                 params_star = params
 
-        #print(f"params_star = {params_star}")
         # now that we have the best parameters, refit the model on outer train fold with those params
         # experiment-specific params
         if experiment_type == "baseline":
@@ -379,6 +405,7 @@ def cv_tune_pipeline_nn(experiment_type = "baseline", n_splits = 5, inner_splits
                     sample_weights=sample_weight
                 )
         
+        # outer fold evaluation
         probs = predict_probs_numpy_mlp(X_val_preprocessed, params_nn, activation=activation)
         f1 = f1_from_probs(y_val_f, probs, threshold)
 
@@ -406,7 +433,8 @@ def cv_tune_pipeline_nn(experiment_type = "baseline", n_splits = 5, inner_splits
                         "natural_kappa_4": nat_kap_4,
                         "natural_kappa_6": nat_kap_6})
         #"sample_weight": sample_weight,
-        
+    
+    # convert the metrics to a pd df
     fold_metrics = pd.DataFrame(metrics)
 
     return {
@@ -415,6 +443,7 @@ def cv_tune_pipeline_nn(experiment_type = "baseline", n_splits = 5, inner_splits
         "summary" : {"f1_mean": fold_metrics["f1"].mean(),
                      "f1_std": fold_metrics["f1"].std()}}
 
+# run neural network cv for each experiment type and save the results as a JSON
 def main():
     baseline_metrics_dict = cv_tune_pipeline_nn()
     baseline_metrics_dict["fold_metrics"] = baseline_metrics_dict["fold_metrics"].to_dict(orient="records")

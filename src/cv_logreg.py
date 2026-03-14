@@ -1,9 +1,14 @@
 """
-05_transform_and_cv carries out 5-fold CV with hyperparameter tuning on the training set. It fits and applies
-the full preprocessing pipeline: MICE (iterative imputation) on the numeric columns,
-one-hot encoding on the categorical columns, and standardization onf the numeric features.
-Within both the inner and outer CV loop, both processing and evaluation are carried out. The cv_pipeline function
-takes in the experiment type as one of its arguments.
+cv_logreg does nested stratified cross-validation on the training
+data to tune and select hyperparameters for the Logistic Regression experiments.
+The inner cross-validation is 3-fold and selects the best performing hyperparameters
+according to F1 score. The outer cross-validation is 5-fold and provides an 
+estimate of the model's performance using those best hyperparameters fitted on
+the outer training fold. Results (hyperparameters selected and F1 score achieved) are
+saved to JSON files.
+AI Use: GPT-5 was used as a collaborator for conceptual understanding of the steps involved in
+nesed cross-validation, and to ensure no data leakage occured. It was also used for help with
+how to save the parameters and metrics to a JSON file.
 """
 import numpy as np
 import pandas as pd
@@ -23,6 +28,7 @@ import json
 numeric_cols = ["RIDAGEYR", "LBXTC", "LBDHDD", "LBXSTR", "LBXSCR", "LBXHSCRP", "DBP_mean", "SBP_mean", "BMXBMI", "BMXHIP", "SMQ020"]
 cat_cols = ["DMDEDUC2", "RIDRETH3", "RIAGENDR"]
 
+# the same preprocessing functions from 05_process_before_test
 def preprocess_fit_transform(X_train):
     mice = IterativeImputer(random_state=3, max_iter=20)
     scaler = StandardScaler()
@@ -35,6 +41,7 @@ def preprocess_fit_transform(X_train):
 
     return X_train_processed, mice, scaler, encoder
 
+# the same preprocessing functions from 05_process_before_test
 def preprocess_transform(X_val, mice, scaler, encoder):
     X_numeric = pd.DataFrame(mice.transform(X_val[numeric_cols]), columns=numeric_cols, index=X_val.index)
     X_scaled = pd.DataFrame(scaler.transform(X_numeric), columns=numeric_cols, index=X_val.index)
@@ -42,6 +49,7 @@ def preprocess_transform(X_val, mice, scaler, encoder):
 
     return pd.concat([X_scaled, X_cat], axis=1)
 
+# define function to calculate F1 score from the model's predicted probablities and true y values
 def f1_from_probs(y_true, probs, threshold):
     y_true = np.asarray(y_true)
     preds = (probs >= threshold).astype(int)
@@ -75,6 +83,7 @@ def cv_tune_pipeline_logreg(experiment_type = "baseline", n_splits = 5, inner_sp
     y = df["diabetes"].astype(int)
     X = df.drop(columns=["diabetes"])
 
+    # specify grid of parameters to search through
     lambda_grid = [1e-4, 1e-3, 1e-2, 1e-1, 0, 1]
     threshold_grid = [0.25, 0.35, 0.45, 0.55]
     gamma_grid = [0.5, 1, 1.5]
@@ -95,9 +104,10 @@ def cv_tune_pipeline_logreg(experiment_type = "baseline", n_splits = 5, inner_sp
 
         # compute natural kappas for upsampling
         nat_kap_1, nat_kap_4, nat_kap_6 = get_natural_kappas(X_train_f)
+        # kappa multiplier grid for upsampling experiment
         kappa_mult_grid = [1.0, 1.5]
 
-        # define parameter grids
+        # define parameter grids (list(product() creates all possible combinations of the specified hyperparameters)
         if experiment_type == "baseline":
             param_grid = list(product(lambda_grid, threshold_grid))
         elif experiment_type == "upsample":
@@ -108,15 +118,15 @@ def cv_tune_pipeline_logreg(experiment_type = "baseline", n_splits = 5, inner_sp
             param_grid = list(product(lambda_grid, threshold_grid))
         elif experiment_type == "gmm":
             param_grid = list(product(lambda_grid, threshold_grid, n_comps_grid))
-
+        
+        # define stratified folds to keep consistent diabetes prevalence across folds
         skf_inner = StratifiedKFold(n_splits=inner_splits, shuffle=True, random_state=random_state)
         score_star = -np.inf
+        # will be updated with best parameters during cv
         params_star = None
 
-        #print(f"param_grid is {param_grid}")
         # loop through all possible hyperparam combinations, do inner 3-fold cv on them
         for params in param_grid:
-            #print(f"param is {params}")
             scores_inner = []
             for (train_idx_inner, val_idx_inner) in skf_inner.split(X_train_f, y_train_f):
                 X_train_f_inner = X_train_f.iloc[train_idx_inner]
@@ -124,7 +134,7 @@ def cv_tune_pipeline_logreg(experiment_type = "baseline", n_splits = 5, inner_sp
                 X_val_f_inner = X_train_f.iloc[val_idx_inner]
                 y_val_f_inner = y_train_f.iloc[val_idx_inner]
 
-                # experiment-specific params
+                # experiment-specific params; if experiment doesn't use that param, set it to None
                 if experiment_type == "baseline":
                     lambda_reg, threshold = params
                     gamma = None
@@ -180,45 +190,50 @@ def cv_tune_pipeline_logreg(experiment_type = "baseline", n_splits = 5, inner_sp
                     kappa_mult_4 = None
                     kappa_mult_6 = None
 
+                # apply preprocessing pipeline to inner train fold
                 X_train_inner_preprocessed, mice, scaler, encoder = preprocess_fit_transform(X_train_f_inner)
                 X_val_inner_preprocessed = preprocess_transform(X_val_f_inner, mice, scaler, encoder)
 
                 # manipulate fold for specific experiment
+                # upsampling
                 if experiment_type == "upsample":
                     train_set_inner = pd.concat([X_train_inner_preprocessed, y_train_f_inner.rename("diabetes")], axis=1)
                     train_set_inner = naive_upsample(train_set_inner, kappa_1=kappa_1, kappa_4=kappa_4, kappa_6=kappa_6)
                     y_train_f_inner = train_set_inner["diabetes"]
                     X_train_inner_preprocessed = train_set_inner.drop(columns=["diabetes"])
                 
+                # clustering
                 elif experiment_type == "cluster":
-                    # clustering code. do this before one hot encoding, after scaling/imputation?
                     train_set_inner = pd.concat([X_train_inner_preprocessed, y_train_f_inner.rename("diabetes")], axis=1)
                     train_set_inner = run_k_prototypes(train_set_inner, gamma = gamma, n_clusters = n_clusters)
                     y_train_f_inner = train_set_inner["diabetes"]
                     X_train_inner_preprocessed = train_set_inner.drop(columns=["diabetes"])
 
+                # cost-sensitive
                 elif experiment_type == "cost_sensitive":
                     train_set_inner = pd.concat([X_train_inner_preprocessed, y_train_f_inner.rename("diabetes")], axis=1)
                     sample_weight = calculate_sample_weight(train_set_inner)
                     y_train_f_inner = train_set_inner["diabetes"]
                     X_train_inner_preprocessed = train_set_inner.drop(columns=["diabetes"])
                 
+                # gmm
                 elif experiment_type == "gmm":
                     train_set_inner = pd.concat([X_train_inner_preprocessed, y_train_f_inner.rename("diabetes")], axis=1)
                     train_set_inner = gmm_cluster_upsample(train_set_inner, n_components=n_comps)
                     y_train_f_inner = train_set_inner["diabetes"]
                     X_train_inner_preprocessed = train_set_inner.drop(columns=["diabetes"])
 
-                # inner model fit
+                # inner logreg fit
                 if experiment_type in ["baseline", "upsample", "cluster", "gmm"]:
                     theta = logistic_regression(X_train_inner_preprocessed.to_numpy(), y_train_f_inner.to_numpy(),
                                                 lambda_reg = lambda_reg)
+                    
                 # change to account for penalty weight calculations
                 elif experiment_type == "cost_sensitive":
                     theta = logistic_regression(X_train_inner_preprocessed.to_numpy(), y_train_f_inner.to_numpy(),
                                         sample_weight = sample_weight, lambda_reg = lambda_reg)
                     
-                # prediction and score for inner loop
+                # prediction and F1 score for inner loop
                 probs = 1 / (1 + np.exp(-(X_val_inner_preprocessed.to_numpy() @ theta)))
                 scores_inner.append(f1_from_probs(y_val_f_inner, probs, threshold))
 
@@ -228,7 +243,6 @@ def cv_tune_pipeline_logreg(experiment_type = "baseline", n_splits = 5, inner_sp
                 score_star = mean_inner
                 params_star = params
 
-        #print(f"params_star = {params_star}")
         # now that we have the best parameters, refit the model on outer train fold with those params
         # experiment-specific params:
         if experiment_type == "baseline":
@@ -316,6 +330,7 @@ def cv_tune_pipeline_logreg(experiment_type = "baseline", n_splits = 5, inner_sp
             y_train_f = train_set["diabetes"]
             X_train_preprocessed = train_set.drop(columns=["diabetes"])
 
+        # fit logreg on outer fold
         if experiment_type in ["baseline", "upsample", "cluster", "gmm"]:
             theta = logistic_regression(X_train_preprocessed.to_numpy(), y_train_f.to_numpy(), lambda_reg=lambda_reg)
 
@@ -347,6 +362,7 @@ def cv_tune_pipeline_logreg(experiment_type = "baseline", n_splits = 5, inner_sp
                         })
         #"sample_weight": sample_weight,
         
+    # convert the metrics to a pd df
     fold_metrics = pd.DataFrame(metrics)
 
     return {
@@ -355,6 +371,7 @@ def cv_tune_pipeline_logreg(experiment_type = "baseline", n_splits = 5, inner_sp
         "summary" : {"f1_mean": fold_metrics["f1"].mean(),
                      "f1_std": fold_metrics["f1"].std()}}
 
+# run logreg cv for each experiment type and save the results as a JSON
 def main():
     baseline_metrics_dict = cv_tune_pipeline_logreg()
     print("baseline finished")

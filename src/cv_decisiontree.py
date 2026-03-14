@@ -121,7 +121,7 @@ def cv_tune_pipeline_dt(experiment_type = "baseline", n_splits = 5, inner_splits
         elif experiment_type == "gmm":
             param_grid = list(product(max_depth_grid, min_samples_split_grid, min_samples_leaf_grid, threshold_grid, n_comps_grid))
 
-    # define stratified folds to keep consistent diabetes prevalence across folds
+        # define stratified folds to keep consistent diabetes prevalence across folds
         skf_inner = StratifiedKFold(n_splits=inner_splits, shuffle=True, random_state=random_state)
         score_star = -np.inf
         # will be updated with best parameters during cv
