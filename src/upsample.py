@@ -2,6 +2,9 @@
 upsample.py reads the processed training set and upsamples the minority 
 racial classes based on specified kappa ratios. 
 It outputs a new dataframe for the upsampled training set.
+
+AI Use: Google Gemini was used as a collaborator to help brainstorm
+code structure and debug implementation issues.
 """
 
 import pandas as pd
