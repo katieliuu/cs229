@@ -8,6 +8,7 @@ The DataFrames are then joined into one DataFrame using repeated left
 joins, with the starting DataFrame being 'DEMO_J' (all patients.)
 The output DataFrame is saved as a csv to src/data/analysis_ready
 """
+
 from pathlib import Path
 import os
 import pyreadstat
