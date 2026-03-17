@@ -3,6 +3,9 @@ neuralnetwork.py implements a two-class neural network from scratch using numpy,
 forward propagation, backpropagation, and mini-batch gradient descent.
 Supports sigmoid and ReLU activations, inverted dropout, L2 regularization,
 and sample-weighted loss for cost-sensitive learning.
+
+AI Use: Google Gemini was used as a collaborator to help brainstorm
+code structure and debug implementation issues.
 """
 
 import numpy as np

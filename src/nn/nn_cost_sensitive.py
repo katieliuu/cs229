@@ -2,6 +2,9 @@
 nn_cost_sensitive.py trains a Neural Network model on the dataset with cost-sensitive learning.
 It outputs the final training accuracy and evaluates on the test set.
 Cost-sensitive learning is done by upweighting the minority class misclassification using sample weights.
+
+AI Use: Google Gemini was used as a collaborator to help brainstorm
+code structure and debug implementation issues.
 """
 
 import pandas as pd

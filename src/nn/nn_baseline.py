@@ -2,6 +2,9 @@
 nn_baseline.py trains a Neural Network model on the baseline dataset.
 It outputs the final training accuracy and evaluates on the test set
 with and without regularization aka L2 weight decay and dropout.
+
+AI Use: Google Gemini was used as a collaborator to help brainstorm
+code structure and debug implementation issues.
 """
 
 import pandas as pd

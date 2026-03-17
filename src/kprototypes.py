@@ -5,6 +5,9 @@ continuous features and Hamming distance for categorical features,
 combined via a gamma scaling parameter. After clustering, minority clusters are 
 upsampled via naive duplication to match the size of the largest cluster, and the 
 resulting dataset is returned for use in downstream classification.
+
+AI Use: Google Gemini was used as a collaborator to help brainstorm
+code structure and debug implementation issues.
 """
 
 import pandas as pd

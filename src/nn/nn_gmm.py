@@ -1,6 +1,9 @@
 """
 nn_gmm.py trains a Neural Network model on the GMM clustered/upsampled dataset.
 It outputs the final training accuracy and evaluates on the test set.
+
+AI Use: Google Gemini was used as a collaborator to help brainstorm
+code structure and debug implementation issues.
 """
 
 import pandas as pd

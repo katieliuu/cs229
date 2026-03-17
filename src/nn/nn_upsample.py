@@ -2,6 +2,9 @@
 nn_upsample.py trains a Neural Network model on the dataset with naive upsampling.
 It outputs the final training accuracy and evaluates on the test set.
 Upsampling is done by duplicating minority class examples based on natural kappas.
+
+AI Use: Google Gemini was used as a collaborator to help brainstorm
+code structure and debug implementation issues.
 """
 
 import pandas as pd
